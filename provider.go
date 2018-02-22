@@ -1,7 +1,7 @@
 package jstore
 
 // StoreProvider is a factory method for creation of stores.
-type ProviderFunc func(connectionCongig string) (JStore, error)
+type ProviderFunc func(connectionCongig string) (Store, error)
 
 var provider = map[string]ProviderFunc{}
 
