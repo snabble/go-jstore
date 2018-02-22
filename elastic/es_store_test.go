@@ -29,7 +29,7 @@ var (
 )
 
 func Test_ElasticStore(t *testing.T) {
-	s, err := NewElasticStore(esTestURL())
+	s, err := NewStore("elastic", esTestURL())
 	NoError(t, err)
 
 	err = s.Marshal(ford, project, documentType, "ford")
