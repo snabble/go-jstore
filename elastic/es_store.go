@@ -2,7 +2,6 @@ package elastic
 
 import (
 	"context"
-	"fmt"
 	es "github.com/olivere/elastic"
 	"github.com/pkg/errors"
 	"github.com/snabble/go-jstore"
