@@ -6,26 +6,26 @@ import (
 )
 
 type Store interface {
-	Delete(project, documentType, id string) error
-	Save(project, documentType, id string, json string) error
-	Find(project, documentType string, matcher ...Matcher) (string, error)
-	FindN(project, documentType string, maxCount int, matcher ...Matcher) ([]string, error)
+	Delete(project, documentType, id string, options ...Option) error
+	Save(project, documentType, id string, json string, options ...Option) error
+	Find(project, documentType string, options ...Option) (string, error)
+	FindN(project, documentType string, maxResults int, options ...Option) ([]string, error)
 }
 
 type JStore interface {
 	Store
-	Marshal(object interface{}, project, documentType, id string) error
-	Unmarshal(objectRef interface{}, project, documentType string, matcher ...Matcher) error
+	Marshal(object interface{}, project, documentType, id string, options ...Option) error
+	Unmarshal(objectRef interface{}, project, documentType string, options ...Option) error
 	Bucket(project, documentType string) Bucket
 }
 
 type Bucket interface {
-	Delete(id string) error
-	Save(id string, json string) error
-	Find(matcher ...Matcher) (string, error)
-	FindN(maxCount int, matcher ...Matcher) ([]string, error)
-	Marshal(object interface{}, id string) error
-	Unmarshal(objectRef interface{}, matcher ...Matcher) error
+	Delete(id string, options ...Option) error
+	Save(id string, json string, options ...Option) error
+	Find(options ...Option) (string, error)
+	FindN(maxResults int, options ...Option) ([]string, error)
+	Marshal(object interface{}, id string, options ...Option) error
+	Unmarshal(objectRef interface{}, options ...Option) error
 }
 
 var (
@@ -63,16 +63,16 @@ type marshalStore struct {
 	Store
 }
 
-func (store *marshalStore) Marshal(object interface{}, project, documentType, id string) error {
+func (store *marshalStore) Marshal(object interface{}, project, documentType, id string, options ...Option) error {
 	j, err := json.Marshal(object)
 	if err != nil {
 		return err
 	}
-	return store.Save(project, documentType, id, string(j))
+	return store.Save(project, documentType, id, string(j), options...)
 }
 
-func (store *marshalStore) Unmarshal(objectRef interface{}, project, documentType string, matcher ...Matcher) error {
-	j, err := store.Find(project, documentType, matcher...)
+func (store *marshalStore) Unmarshal(objectRef interface{}, project, documentType string, options ...Option) error {
+	j, err := store.Find(project, documentType, options...)
 	if err != nil {
 		return err
 	}
@@ -93,26 +93,26 @@ type bucket struct {
 	documentType string
 }
 
-func (b *bucket) Delete(id string) error {
-	return b.store.Delete(b.project, b.documentType, id)
+func (b *bucket) Delete(id string, options ...Option) error {
+	return b.store.Delete(b.project, b.documentType, id, options...)
 }
 
-func (b *bucket) Save(id string, json string) error {
-	return b.store.Save(b.project, b.documentType, id, json)
+func (b *bucket) Save(id string, json string, options ...Option) error {
+	return b.store.Save(b.project, b.documentType, id, json, options...)
 }
 
-func (b *bucket) Find(matcher ...Matcher) (string, error) {
-	return b.store.Find(b.project, b.documentType, matcher...)
+func (b *bucket) Find(options ...Option) (string, error) {
+	return b.store.Find(b.project, b.documentType, options...)
 }
 
-func (b *bucket) FindN(maxCount int, matcher ...Matcher) ([]string, error) {
-	return b.store.FindN(b.project, b.documentType, maxCount, matcher...)
+func (b *bucket) FindN(maxResults int, options ...Option) ([]string, error) {
+	return b.store.FindN(b.project, b.documentType, maxResults, options...)
 }
 
-func (b *bucket) Marshal(object interface{}, id string) error {
-	return b.store.Marshal(object, b.project, b.documentType, id)
+func (b *bucket) Marshal(object interface{}, id string, options ...Option) error {
+	return b.store.Marshal(object, b.project, b.documentType, id, options...)
 }
 
-func (b *bucket) Unmarshal(objectRef interface{}, matcher ...Matcher) error {
-	return b.store.Unmarshal(objectRef, b.project, b.documentType, matcher...)
+func (b *bucket) Unmarshal(objectRef interface{}, options ...Option) error {
+	return b.store.Unmarshal(objectRef, b.project, b.documentType, options...)
 }
