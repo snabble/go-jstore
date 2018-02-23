@@ -6,25 +6,25 @@ import (
 )
 
 type Store interface {
-	Delete(project, documentType, id string, options ...Option) error
-	Save(project, documentType, id string, json string, options ...Option) error
+	Delete(project, documentType, id string) error
+	Save(project, documentType, id string, json string) error
 	Find(project, documentType string, options ...Option) (string, error)
 	FindN(project, documentType string, maxResults int, options ...Option) ([]string, error)
 }
 
 type JStore interface {
 	Store
-	Marshal(object interface{}, project, documentType, id string, options ...Option) error
+	Marshal(object interface{}, project, documentType, id string) error
 	Unmarshal(objectRef interface{}, project, documentType string, options ...Option) error
 	Bucket(project, documentType string) Bucket
 }
 
 type Bucket interface {
-	Delete(id string, options ...Option) error
-	Save(id string, json string, options ...Option) error
+	Delete(id string) error
+	Save(id string, json string) error
 	Find(options ...Option) (string, error)
 	FindN(maxResults int, options ...Option) ([]string, error)
-	Marshal(object interface{}, id string, options ...Option) error
+	Marshal(object interface{}, id string) error
 	Unmarshal(objectRef interface{}, options ...Option) error
 }
 
@@ -32,23 +32,23 @@ var (
 	NotFound = errors.New("Document not found")
 )
 
-func NewStore(driverName, dataSourceName string) (JStore, error) {
+func NewStore(driverName, dataSourceName string, options ...StoreOption) (JStore, error) {
 	p, found := getProvider(driverName)
 	if !found {
 		return nil, errors.New("No jstore provider for type: " + driverName)
 	}
-	store, err := p(dataSourceName)
+	store, err := p(dataSourceName, options...)
 	return &marshalStore{
 		Store: store,
 	}, err
 }
 
-func NewBucket(driverName, dataSourceName, project, documentType string) (Bucket, error) {
+func NewBucket(driverName, dataSourceName, project, documentType string, options ...StoreOption) (Bucket, error) {
 	p, found := getProvider(driverName)
 	if !found {
 		return nil, errors.New("No jstore provider for type: " + driverName)
 	}
-	store, err := p(dataSourceName)
+	store, err := p(dataSourceName, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -63,12 +63,12 @@ type marshalStore struct {
 	Store
 }
 
-func (store *marshalStore) Marshal(object interface{}, project, documentType, id string, options ...Option) error {
+func (store *marshalStore) Marshal(object interface{}, project, documentType, id string) error {
 	j, err := json.Marshal(object)
 	if err != nil {
 		return err
 	}
-	return store.Save(project, documentType, id, string(j), options...)
+	return store.Save(project, documentType, id, string(j))
 }
 
 func (store *marshalStore) Unmarshal(objectRef interface{}, project, documentType string, options ...Option) error {
@@ -93,12 +93,12 @@ type bucket struct {
 	documentType string
 }
 
-func (b *bucket) Delete(id string, options ...Option) error {
-	return b.store.Delete(b.project, b.documentType, id, options...)
+func (b *bucket) Delete(id string) error {
+	return b.store.Delete(b.project, b.documentType, id)
 }
 
-func (b *bucket) Save(id string, json string, options ...Option) error {
-	return b.store.Save(b.project, b.documentType, id, json, options...)
+func (b *bucket) Save(id string, json string) error {
+	return b.store.Save(b.project, b.documentType, id, json)
 }
 
 func (b *bucket) Find(options ...Option) (string, error) {
@@ -109,8 +109,8 @@ func (b *bucket) FindN(maxResults int, options ...Option) ([]string, error) {
 	return b.store.FindN(b.project, b.documentType, maxResults, options...)
 }
 
-func (b *bucket) Marshal(object interface{}, id string, options ...Option) error {
-	return b.store.Marshal(object, b.project, b.documentType, id, options...)
+func (b *bucket) Marshal(object interface{}, id string) error {
+	return b.store.Marshal(object, b.project, b.documentType, id)
 }
 
 func (b *bucket) Unmarshal(objectRef interface{}, options ...Option) error {

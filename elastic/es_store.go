@@ -5,30 +5,36 @@ import (
 	es "github.com/olivere/elastic"
 	"github.com/pkg/errors"
 	"github.com/snabble/go-jstore"
+	"strings"
 )
+
+var DriverName = "elastic"
 
 func init() {
 	jstore.RegisterProvider("elastic", NewElasticStore)
 }
 
 type ElasticStore struct {
-	client *es.Client
+	client      *es.Client
+	syncUpdates bool
 }
 
-func NewElasticStore(baseURL string) (jstore.Store, error) {
+func NewElasticStore(baseURL string, options ...jstore.StoreOption) (jstore.Store, error) {
 	client, err := es.NewClient(es.SetURL(baseURL))
+
 	return &ElasticStore{
-		client: client,
+		client:      client,
+		syncUpdates: len(options) == 1 && options[0] == jstore.SyncUpdates,
 	}, err
 }
 
-func (store *ElasticStore) Delete(project, documentType, id string, options ...jstore.Option) error {
+func (store *ElasticStore) Delete(project, documentType, id string) error {
 	query := store.client.Delete().
-		Index(project).
+		Index(indexName(project, documentType)).
 		Type(documentType).
 		Id(id)
 
-	if len(options) == 1 && options[0] == jstore.SyncUpdates {
+	if store.syncUpdates {
 		query = query.Refresh("true")
 	}
 
@@ -36,14 +42,14 @@ func (store *ElasticStore) Delete(project, documentType, id string, options ...j
 	return err
 }
 
-func (store *ElasticStore) Save(project, documentType, id string, json string, options ...jstore.Option) error {
+func (store *ElasticStore) Save(project, documentType, id string, json string) error {
 	query := store.client.Index().
-		Index(project).
+		Index(indexName(project, documentType)).
 		Type(documentType).
 		Id(id).
 		BodyString(json)
 
-	if len(options) == 1 && options[0] == jstore.SyncUpdates {
+	if store.syncUpdates {
 		query = query.Refresh("true")
 	}
 
@@ -58,7 +64,13 @@ func (store *ElasticStore) Find(project, documentType string, options ...jstore.
 	}
 
 	resp, err := search.Size(1).Do(store.cntx())
+
 	if err != nil {
+		if e, ok := err.(*es.Error); ok &&
+			(e.Details.Type == "index_not_found_exception" ||
+				e.Details.Reason == "no such index") {
+			return "", jstore.NotFound
+		}
 		return "", err
 	}
 
@@ -77,6 +89,11 @@ func (store *ElasticStore) FindN(project, documentType string, maxCount int, opt
 
 	resp, err := search.Size(maxCount).Do(store.cntx())
 	if err != nil {
+		if e, ok := err.(*es.Error); ok &&
+			(e.Details.Type == "index_not_found_exception" ||
+				e.Details.Reason == "no such index") {
+			return nil, jstore.NotFound
+		}
 		return nil, err
 	}
 
@@ -121,8 +138,12 @@ func (store *ElasticStore) createSearch(project, documentType string, options ..
 		}
 	}
 
-	return store.client.Search(project).
+	return store.client.
+		Search(indexName(project, documentType)).
 		Type(documentType).
-		Index(project).
 		Query(boolQuery), nil
+}
+
+func indexName(project, documentType string) string {
+	return strings.ToLower(project + "-" + documentType)
 }

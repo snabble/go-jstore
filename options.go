@@ -1,6 +1,7 @@
 package jstore
 
 type Option interface{}
+type StoreOption interface{}
 
 func Eq(property string, value interface{}) Option {
 	return CompareOption{property, "=", value}
