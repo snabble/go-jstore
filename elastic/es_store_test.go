@@ -21,8 +21,8 @@ type Person struct {
 }
 
 var (
-	ford   = Person{"Ford Perfect", 42}
-	zappod = Person{"Zaphod Beeblebrox", 4200}
+	ford   = Person{"Ford Prefect", 42}
+	zaphod = Person{"Zaphod Beeblebrox", 4200}
 )
 
 func Test_ElasticStore(t *testing.T) {
@@ -31,7 +31,7 @@ func Test_ElasticStore(t *testing.T) {
 	NoError(t, err)
 
 	NoError(t, b.Marshal(ford, "ford"))
-	NoError(t, b.Marshal(zappod, "zaphod"))
+	NoError(t, b.Marshal(zaphod, "zaphod"))
 
 	var result Person
 
@@ -45,7 +45,7 @@ func Test_ElasticStore(t *testing.T) {
 	NoError(t, err)
 	Equal(t, ford, result)
 
-	err = b.Unmarshal(&result, Eq("Name", "Ford Perfect"))
+	err = b.Unmarshal(&result, Eq("Name", "Ford Prefect"))
 	NoError(t, err)
 	Equal(t, ford, result)
 
@@ -60,7 +60,7 @@ func Test_Delete(t *testing.T) {
 	NoError(t, err)
 
 	NoError(t, b.Marshal(ford, "ford"))
-	NoError(t, b.Marshal(zappod, "zaphod"))
+	NoError(t, b.Marshal(zaphod, "zaphod"))
 
 	// ford is there
 	var result Person
