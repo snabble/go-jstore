@@ -23,43 +23,58 @@ type Person struct {
 var (
 	ford   = Person{"Ford Perfect", 42}
 	zappod = Person{"Zaphod Beeblebrox", 4200}
-
-	project      = "earth" // randStringBytes(10)
-	documentType = "person"
 )
 
 func Test_ElasticStore(t *testing.T) {
-	s, err := NewStore("elastic", esTestURL())
+	b, err := NewBucket("elastic", esTestURL(),
+		randStringBytes(10), "person")
 	NoError(t, err)
 
-	err = s.Marshal(ford, project, documentType, "ford")
-	NoError(t, err)
-
-	err = s.Marshal(zappod, project, documentType, "zaphod")
-	NoError(t, err)
-
-	// hack needed for synchronous tesing
-	s.(*ElasticStore).flush(project)
+	NoError(t, b.Marshal(ford, "ford"))
+	NoError(t, b.Marshal(zappod, "zaphod"))
 
 	var result Person
 
 	// find one person by id
-	err = s.Unmarshal(&result, project, documentType, Id("ford"))
+	err = b.Unmarshal(&result, Id("ford"))
 	NoError(t, err)
 	Equal(t, ford, result)
 
 	// find one person by attribute
-	err = s.Unmarshal(&result, project, documentType, Eq("Age", 42))
+	err = b.Unmarshal(&result, Eq("Age", 42))
 	NoError(t, err)
 	Equal(t, ford, result)
 
-	err = s.Unmarshal(&result, project, documentType, Eq("Name", "Ford Perfect"))
+	err = b.Unmarshal(&result, Eq("Name", "Ford Perfect"))
 	NoError(t, err)
 	Equal(t, ford, result)
 
 	// No matches
-	err = s.Unmarshal(&result, project, documentType, Eq("Name", "ford"))
+	err = b.Unmarshal(&result, Eq("Name", "ford"))
 	Equal(t, err, NotFound)
+}
+
+func Test_Delete(t *testing.T) {
+	b, err := NewBucket("elastic", esTestURL(),
+		randStringBytes(10), "person")
+	NoError(t, err)
+
+	NoError(t, b.Marshal(ford, "ford"))
+	NoError(t, b.Marshal(zappod, "zaphod"))
+
+	// ford is there
+	var result Person
+	NoError(t, b.Unmarshal(&result, Id("ford")))
+
+	// delete ford
+	NoError(t, b.Delete("ford"))
+
+	// fort is away
+	err = b.Unmarshal(&result, Id("ford"))
+	Equal(t, NotFound, err)
+
+	// but zaphod is still there
+	NoError(t, b.Unmarshal(&result, Id("zaphod")))
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyz"
