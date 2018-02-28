@@ -1,0 +1,13 @@
+
+language: go
+
+go:
+ - 1.9.x
+
+services:
+ - elasticsearch
+
+script:
+ - go get -t -v .
+ - go test -cover .
+ - go vet .
