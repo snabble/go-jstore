@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/snabble/go-jstore"
 	"strings"
+	"time"
 )
 
 var DriverName = "elastic"
@@ -28,9 +29,12 @@ func NewElasticStore(baseURL string, options ...jstore.StoreOption) (jstore.Stor
 }
 
 func (store *ElasticStore) HealthCheck() error {
-	resp, err := store.client.ClusterHealth().Do(store.cntx())
+	cntx, cancelFunc := context.WithTimeout(store.cntx(), time.Second)
+	defer cancelFunc()
+	resp, err := store.client.ClusterHealth().
+		Do(cntx)
 	if err != nil {
-		errors.Wrap(err, "elasticsearch health")
+		return errors.Wrap(err, "elasticsearch health")
 	}
 	if resp.Status != "green" && resp.Status != "yellow" {
 		return errors.Errorf("elasticsearch health status is %v", resp.Status)
