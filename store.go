@@ -10,6 +10,7 @@ type Store interface {
 	Save(project, documentType, id string, json string) error
 	Find(project, documentType string, options ...Option) (string, error)
 	FindN(project, documentType string, maxResults int, options ...Option) ([]string, error)
+	HealthCheck() error
 }
 
 type JStore interface {

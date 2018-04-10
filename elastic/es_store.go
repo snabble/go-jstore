@@ -21,11 +21,21 @@ type ElasticStore struct {
 
 func NewElasticStore(baseURL string, options ...jstore.StoreOption) (jstore.Store, error) {
 	client, err := es.NewClient(es.SetURL(baseURL))
-
 	return &ElasticStore{
 		client:      client,
 		syncUpdates: len(options) == 1 && options[0] == jstore.SyncUpdates,
 	}, err
+}
+
+func (store *ElasticStore) HealthCheck() error {
+	resp, err := store.client.ClusterHealth().Do(store.cntx())
+	if err != nil {
+		errors.Wrap(err, "elasticsearch health")
+	}
+	if resp.Status != "green" && resp.Status != "yellow" {
+		return errors.Errorf("elasticsearch health status is %v", resp.Status)
+	}
+	return nil
 }
 
 func (store *ElasticStore) Delete(project, documentType, id string) error {
