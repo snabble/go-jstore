@@ -2,9 +2,12 @@ package elastic
 
 import (
 	"encoding/json"
+	"github.com/olivere/elastic"
 	. "github.com/snabble/go-jstore"
 	. "github.com/stretchr/testify/assert"
 	"math/rand"
+	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"syscall"
 	"testing"
@@ -35,6 +38,32 @@ var (
 	zaphod      = Person{"Zaphod Beeblebrox", 4200, day("1900-01-01")}
 	heartOfGold = Spaceship{"Heart Of Gold", 99999999}
 )
+
+func Test_Health_OK(t *testing.T) {
+	validStore, err := NewElasticStore(esTestURL())
+	NoError(t, err)
+	NoError(t, validStore.HealthCheck())
+}
+
+func Test_Health_Error(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status" : "red"}`))
+	}))
+	defer server.Close()
+
+	esClient, err := elastic.NewClient(
+		elastic.SetURL(server.URL),
+		elastic.SetHealthcheck(false),
+		elastic.SetSniff(false))
+	NoError(t, err)
+
+	invalidStore := &ElasticStore{
+		client: esClient,
+	}
+
+	Error(t, invalidStore.HealthCheck())
+}
 
 func Test_BasicStoring(t *testing.T) {
 	project := randStringBytes(10)
