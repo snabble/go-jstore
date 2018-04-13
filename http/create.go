@@ -15,7 +15,7 @@ func create(store jstore.JStore, extract BodyExtractor, withLinks WithLinks, url
 			return
 		}
 
-		err = store.Marshal(entity, r.Project, r.DocumentType, id)
+		err = store.Marshal(entity, jstore.ID(r.Project, r.DocumentType, id))
 
 		if err != nil {
 			w.SendError(err)

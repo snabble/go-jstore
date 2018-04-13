@@ -15,12 +15,12 @@ func update(store jstore.JStore, extract BodyExtractor, withLinks WithLinks, url
 			return
 		}
 
-		if id != r.ID {
+		if id != "" && id != r.ID {
 			w.SendError(ClientError("invalid id"))
 			return
 		}
 
-		err = store.Marshal(&entity, r.Project, r.DocumentType, r.ID)
+		err = store.Marshal(&entity, r.EntityID())
 
 		if err != nil {
 			w.SendError(err)

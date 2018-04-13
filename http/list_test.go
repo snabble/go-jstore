@@ -32,9 +32,9 @@ func Test_List_Success(t *testing.T) {
 		},
 		documentTypes,
 	)
-	store.Marshal(TestEntity{Message: "hello world"}, "project", "entity", "earth")
-	store.Marshal(TestEntity{Message: "hello saturn"}, "project", "entity", "saturn")
-	store.Marshal(TestEntity{Message: "hello mars"}, "project", "entity", "mars")
+	store.Marshal(TestEntity{Message: "hello world"}, jstore.ID("project", "entity", "earth"))
+	store.Marshal(TestEntity{Message: "hello saturn"}, jstore.ID("project", "entity", "saturn"))
+	store.Marshal(TestEntity{Message: "hello mars"}, jstore.ID("project", "entity", "mars"))
 
 	response := getRequest(router, "http://test/project/entity")
 
@@ -45,15 +45,19 @@ func Test_List_Success(t *testing.T) {
 		`{
 	"resources": [
 		{
-			"message": "hello world"
+			"message": "hello world",
+			"links": {"self": {"href": "/project/entity/earth"}}
 		},
 		{
-			"message": "hello saturn"
+			"message": "hello saturn",
+			"href": "/project/entity/saturn"
 		},
 		{
-			"message": "hello mars"
+			"message": "hello mars",
+			"href": "/project/entity/mars"
 		}
-	]
+	],
+	"links": {"self": {"href": "/project/entity"}}
 }`,
 		response.Body.String(),
 	)

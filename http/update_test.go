@@ -31,7 +31,7 @@ func Test_Update_Success(t *testing.T) {
 		nullWithLinks,
 		documentTypes,
 	)
-	err := store.Marshal(TestEntity{Message: "hello world"}, "project", "entity", "id")
+	err := store.Marshal(TestEntity{Message: "hello world"}, jstore.ID("project", "entity", "id"))
 	require.NoError(t, err)
 
 	response := putRequest(router, "http://test/project/entity/id", `{"message":"hello saturn"}`)

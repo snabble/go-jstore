@@ -20,6 +20,10 @@ type Request struct {
 	ID string
 }
 
+func (request *Request) EntityID() jstore.EntityID {
+	return jstore.EntityID{request.Project, request.DocumentType, request.ID}
+}
+
 func (request *Request) UnmarshalBody(obj interface{}) error {
 	decoder := json.NewDecoder(request.OriginalRequest.Body)
 	err := decoder.Decode(obj)

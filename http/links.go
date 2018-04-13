@@ -30,7 +30,7 @@ func (links Links) MarshalJSON() ([]byte, error) {
 	return json.Marshal(out)
 }
 
-func (links *Links) UnarshalJSON(input []byte) error {
+func (links *Links) UnmarshalJSON(input []byte) error {
 	in := map[string]linkObject{}
 	err := json.Unmarshal(input, &in)
 	if err != nil {
