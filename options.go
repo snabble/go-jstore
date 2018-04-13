@@ -30,7 +30,6 @@ type CompareOption struct {
 }
 
 func Id(value string) Option {
-
 	return IdOption{value}
 }
 
