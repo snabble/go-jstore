@@ -100,7 +100,7 @@ func Test_FindN(t *testing.T) {
 
 	for _, d := range docs {
 		p := Person{}
-		err = json.Unmarshal([]byte(d), &p)
+		err = json.Unmarshal([]byte(d.JSON), &p)
 		NoError(t, err)
 		Contains(t, p.Name, "person-")
 	}

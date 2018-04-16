@@ -2,9 +2,6 @@ package elastic
 
 import (
 	"encoding/json"
-	"github.com/olivere/elastic"
-	. "github.com/snabble/go-jstore"
-	. "github.com/stretchr/testify/assert"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +9,11 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/olivere/elastic"
+
+	. "github.com/snabble/go-jstore"
+	. "github.com/stretchr/testify/assert"
 )
 
 func esTestURL() string {
@@ -212,7 +214,7 @@ func Test_FindN(t *testing.T) {
 
 	for _, d := range docs {
 		p := Person{}
-		err = json.Unmarshal([]byte(d), &p)
+		err = json.Unmarshal([]byte(d.JSON), &p)
 		NoError(t, err)
 		Contains(t, p.Name, "person-")
 	}
