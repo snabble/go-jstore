@@ -5,24 +5,41 @@ import (
 	"errors"
 )
 
+const NoVersion = 0
+
 type EntityID struct {
 	Project      string
 	DocumentType string
 	ID           string
+	Version      int64
 }
 
-func ID(project string, documentType string, id string) EntityID {
-	return EntityID{project, documentType, id}
+func NewID(project string, documentType string, id string) EntityID {
+	return EntityID{
+		Project:      project,
+		DocumentType: documentType,
+		ID:           id,
+	}
+}
+
+func NewIDWithVersion(project string, documentType string, id string, version int64) EntityID {
+	return EntityID{
+		Project:      project,
+		DocumentType: documentType,
+		ID:           id,
+		Version:      version,
+	}
 }
 
 type Entity struct {
 	EntityID
-	JSON string
+	ObjectRef interface{}
+	JSON      string
 }
 
 type Store interface {
 	Delete(id EntityID) error
-	Save(id EntityID, json string) error
+	Save(id EntityID, json string) (EntityID, error)
 	Get(id EntityID) (Entity, error)
 	Find(project, documentType string, options ...Option) (Entity, error)
 	FindN(project, documentType string, maxResults int, options ...Option) ([]Entity, error)
@@ -31,23 +48,24 @@ type Store interface {
 
 type JStore interface {
 	Store
-	Marshal(object interface{}, id EntityID) error
-	Unmarshal(objectRef interface{}, project, documentType string, options ...Option) error
+	Marshal(object interface{}, id EntityID) (EntityID, error)
+	Unmarshal(entityOrObjectRef interface{}, project, documentType string, options ...Option) error
 	Bucket(project, documentType string) Bucket
 }
 
 type Bucket interface {
-	Delete(id string) error
-	Save(id string, json string) error
-	Get(id string) (Entity, error)
+	Delete(id EntityID) error
+	Save(id EntityID, json string) (EntityID, error)
+	Get(id EntityID) (Entity, error)
 	Find(options ...Option) (Entity, error)
 	FindN(maxResults int, options ...Option) ([]Entity, error)
-	Marshal(object interface{}, id string) error
-	Unmarshal(objectRef interface{}, options ...Option) error
+	Marshal(object interface{}, id EntityID) (EntityID, error)
+	Unmarshal(entityOrObjectRef interface{}, options ...Option) error
 }
 
 var (
-	NotFound = errors.New("Document not found")
+	NotFound               = errors.New("Document not found")
+	OptimisticLockingError = errors.New("Optimistic locking failed")
 )
 
 func NewStore(driverName, dataSourceName string, options ...StoreOption) (JStore, error) {
@@ -81,20 +99,28 @@ type marshalStore struct {
 	Store
 }
 
-func (store *marshalStore) Marshal(object interface{}, id EntityID) error {
+func (store *marshalStore) Marshal(object interface{}, id EntityID) (EntityID, error) {
 	j, err := json.Marshal(object)
 	if err != nil {
-		return err
+		return EntityID{}, err
 	}
 	return store.Save(id, string(j))
 }
 
-func (store *marshalStore) Unmarshal(objectRef interface{}, project, documentType string, options ...Option) error {
-	j, err := store.Find(project, documentType, options...)
+func (store *marshalStore) Unmarshal(entityOrObjectRef interface{}, project, documentType string, options ...Option) error {
+	found, err := store.Find(project, documentType, options...)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal([]byte(j.JSON), objectRef)
+
+	objectRef := entityOrObjectRef
+	if entity, ok := entityOrObjectRef.(*Entity); ok {
+		entity.EntityID = found.EntityID
+		entity.JSON = found.JSON
+		objectRef = entity.ObjectRef
+	}
+
+	return json.Unmarshal([]byte(found.JSON), objectRef)
 }
 
 func (store *marshalStore) Bucket(project, documentType string) Bucket {
@@ -111,16 +137,16 @@ type bucket struct {
 	documentType string
 }
 
-func (b *bucket) Delete(id string) error {
-	return b.store.Delete(b.entityID(id))
+func (b *bucket) Delete(id EntityID) error {
+	return b.store.Delete(b.resolveRelativeToBucket(id))
 }
 
-func (b *bucket) Save(id string, json string) error {
-	return b.store.Save(b.entityID(id), json)
+func (b *bucket) Save(id EntityID, json string) (EntityID, error) {
+	return b.store.Save(b.resolveRelativeToBucket(id), json)
 }
 
-func (b *bucket) Get(id string) (Entity, error) {
-	return b.store.Get(b.entityID(id))
+func (b *bucket) Get(id EntityID) (Entity, error) {
+	return b.store.Get(b.resolveRelativeToBucket(id))
 }
 
 func (b *bucket) Find(options ...Option) (Entity, error) {
@@ -131,18 +157,19 @@ func (b *bucket) FindN(maxResults int, options ...Option) ([]Entity, error) {
 	return b.store.FindN(b.project, b.documentType, maxResults, options...)
 }
 
-func (b *bucket) Marshal(object interface{}, id string) error {
-	return b.store.Marshal(object, b.entityID(id))
+func (b *bucket) Marshal(object interface{}, id EntityID) (EntityID, error) {
+	return b.store.Marshal(object, b.resolveRelativeToBucket(id))
 }
 
-func (b *bucket) Unmarshal(objectRef interface{}, options ...Option) error {
-	return b.store.Unmarshal(objectRef, b.project, b.documentType, options...)
+func (b *bucket) Unmarshal(entityOrObjectRef interface{}, options ...Option) error {
+	return b.store.Unmarshal(entityOrObjectRef, b.project, b.documentType, options...)
 }
 
-func (b *bucket) entityID(id string) EntityID {
+func (b *bucket) resolveRelativeToBucket(id EntityID) EntityID {
 	return EntityID{
 		Project:      b.project,
 		DocumentType: b.documentType,
-		ID:           id,
+		ID:           id.ID,
+		Version:      id.Version,
 	}
 }

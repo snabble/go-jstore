@@ -71,12 +71,17 @@ func (store *MemoryStore) Delete(id jstore.EntityID) error {
 		return nil
 	}
 
+	item, ok := store.storage[id.Project][id.DocumentType][id.ID]
+	if ok && (item.entity.Version != id.Version && id.Version != jstore.NoVersion) {
+		return jstore.OptimisticLockingError
+	}
+
 	delete(store.storage[id.Project][id.DocumentType], id.ID)
 
 	return nil
 }
 
-func (store *MemoryStore) Save(id jstore.EntityID, json string) error {
+func (store *MemoryStore) Save(id jstore.EntityID, json string) (jstore.EntityID, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
 
@@ -87,14 +92,20 @@ func (store *MemoryStore) Save(id jstore.EntityID, json string) error {
 		store.storage[id.Project][id.DocumentType] = map[string]storageItem{}
 	}
 
-	item, err := newItem(jstore.Entity{jstore.EntityID{id.Project, id.DocumentType, id.ID}, json})
+	present, ok := store.storage[id.Project][id.DocumentType][id.ID]
+	if ok && (present.entity.Version != id.Version && id.Version != jstore.NoVersion) {
+		return present.entity.EntityID, jstore.OptimisticLockingError
+	}
+
+	entity := jstore.Entity{jstore.NewIDWithVersion(id.Project, id.DocumentType, id.ID, present.entity.Version+1), nil, json}
+	item, err := newItem(entity)
 	if err != nil {
-		return err
+		return jstore.EntityID{}, err
 	}
 
 	store.storage[id.Project][id.DocumentType][id.ID] = item
 
-	return nil
+	return item.entity.EntityID, nil
 }
 
 func (store *MemoryStore) Get(id jstore.EntityID) (jstore.Entity, error) {

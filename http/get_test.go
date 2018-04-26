@@ -30,7 +30,7 @@ func Test_Get_Success(t *testing.T) {
 		},
 		documentTypes,
 	)
-	err := store.Marshal(TestEntity{Message: "hello world"}, jstore.ID("project", "entity", "id"))
+	_, err := store.Marshal(TestEntity{Message: "hello world"}, jstore.NewID("project", "entity", "id"))
 	require.NoError(t, err)
 
 	response := getRequest(router, "http://test/project/entity/id")

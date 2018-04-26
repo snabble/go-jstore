@@ -50,27 +50,55 @@ func (store *ElasticStore) Delete(id jstore.EntityID) error {
 		Type(id.DocumentType).
 		Id(id.ID)
 
+	if id.Version != jstore.NoVersion {
+		query.Version(id.Version)
+	}
+
 	if store.syncUpdates {
 		query = query.Refresh("true")
 	}
 
 	_, err := query.Do(store.cntx())
+
+	if err != nil {
+		if e, ok := err.(*elastic.Error); ok && e.Details.Type == "version_conflict_engine_exception" {
+			return jstore.OptimisticLockingError
+		}
+	}
+
 	return err
 }
 
-func (store *ElasticStore) Save(id jstore.EntityID, json string) error {
+func (store *ElasticStore) Save(id jstore.EntityID, json string) (jstore.EntityID, error) {
 	query := store.client.Index().
 		Index(indexName(id.Project, id.DocumentType)).
 		Type(id.DocumentType).
 		Id(id.ID).
 		BodyString(json)
 
+	if id.Version != jstore.NoVersion {
+		query.Version(id.Version)
+	}
+
 	if store.syncUpdates {
 		query = query.Refresh("true")
 	}
 
-	_, err := query.Do(store.cntx())
-	return err
+	resp, err := query.Do(store.cntx())
+
+	if err != nil {
+		if e, ok := err.(*elastic.Error); ok && e.Details.Type == "version_conflict_engine_exception" {
+			return jstore.EntityID{}, jstore.OptimisticLockingError
+		}
+		return id, err
+	}
+
+	return jstore.EntityID{
+		Project:      id.Project,
+		DocumentType: id.DocumentType,
+		ID:           resp.Id,
+		Version:      resp.Version,
+	}, nil
 }
 
 func (store *ElasticStore) Get(id jstore.EntityID) (jstore.Entity, error) {
@@ -130,12 +158,18 @@ func (store *ElasticStore) cntx() context.Context {
 
 func toEntity(project, documentType string, hit *elastic.SearchHit) jstore.Entity {
 	return jstore.Entity{
-		jstore.EntityID{
-			Project:      project,
-			DocumentType: documentType,
-			ID:           hit.Id,
-		},
+		toEntityID(project, documentType, hit),
+		nil,
 		string(*hit.Source),
+	}
+}
+
+func toEntityID(project, documentType string, hit *elastic.SearchHit) jstore.EntityID {
+	return jstore.EntityID{
+		Project:      project,
+		DocumentType: documentType,
+		ID:           hit.Id,
+		Version:      *hit.Version,
 	}
 }
 
@@ -172,6 +206,7 @@ func (store *ElasticStore) createSearch(project, documentType string, options ..
 	return store.client.
 		Search(indexName(project, documentType)).
 		Type(documentType).
+		Version(true).
 		Query(boolQuery), nil
 }
 

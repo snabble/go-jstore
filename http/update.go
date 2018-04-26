@@ -20,7 +20,7 @@ func update(store jstore.JStore, extract BodyExtractor, withLinks WithLinks, url
 			return
 		}
 
-		err = store.Marshal(&entity, r.EntityID())
+		_, err = store.Marshal(&entity, r.EntityID())
 
 		if err != nil {
 			w.SendError(err)
