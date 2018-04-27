@@ -25,6 +25,7 @@ func Test_Create_Success(t *testing.T) {
 		allPermited,
 		allPermited,
 		allPermited,
+		nullQueryExtractor,
 		func(r Request) (string, interface{}, error) {
 			requestArg = r
 			return "id", TestEntity{Message: message}, nil
@@ -80,6 +81,7 @@ func Test_Create_ExtractionErrors(t *testing.T) {
 				allPermited,
 				allPermited,
 				allPermited,
+				nullQueryExtractor,
 				func(r Request) (string, interface{}, error) {
 					return "", nil, test.returnedError
 				},
@@ -107,7 +109,8 @@ func Test_Create_ChecksPermits(t *testing.T) {
 		allPermited,
 		allPermited,
 		allPermited,
-		nullExtractor,
+		nullQueryExtractor,
+		nullBodyExtractor,
 		nullEntity,
 		nullWithLinks,
 		documentTypes,

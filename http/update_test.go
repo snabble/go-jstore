@@ -22,6 +22,7 @@ func Test_Update_Success(t *testing.T) {
 		allPermited,
 		allPermited,
 		allPermited,
+		nullQueryExtractor,
 		func(r Request) (string, interface{}, error) {
 			return "id", TestEntity{Message: "hello saturn"}, nil
 		},
@@ -57,6 +58,7 @@ func Test_Update_NotFound(t *testing.T) {
 		allPermited,
 		allPermited,
 		allPermited,
+		nullQueryExtractor,
 		func(r Request) (string, interface{}, error) {
 			return r.ID, TestEntity{Message: "hello"}, nil
 		},
@@ -112,6 +114,7 @@ func Test_Update_ExtractionErrors(t *testing.T) {
 				allPermited,
 				allPermited,
 				allPermited,
+				nullQueryExtractor,
 				func(r Request) (string, interface{}, error) {
 					return "", nil, test.returnedError
 				},
@@ -138,6 +141,7 @@ func Test_Update_ValidatesProvidedId(t *testing.T) {
 		allPermited,
 		allPermited,
 		allPermited,
+		nullQueryExtractor,
 		func(r Request) (string, interface{}, error) {
 			return "id", TestEntity{Message: "hello"}, nil
 		},
@@ -164,7 +168,8 @@ func Test_Update_ChecksPermits(t *testing.T) {
 		allPermited,
 		nobodyPermited,
 		allPermited,
-		nullExtractor,
+		nullQueryExtractor,
+		nullBodyExtractor,
 		nullEntity,
 		nullWithLinks,
 		documentTypes,

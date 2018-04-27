@@ -9,7 +9,13 @@ import (
 
 const ListMaxResults = 1000
 
-func list(store jstore.JStore, provider EntityProvider, withLinks WithLinks, urls *URLBuilder) func(w Response, r Request) {
+func list(
+	store jstore.JStore,
+	provider EntityProvider,
+	extractor QueryExtractor,
+	withLinks WithLinks,
+	urls *URLBuilder,
+) func(w Response, r Request) {
 	toResources := func(items []jstore.Entity) ([]interface{}, error) {
 		entities := make([]interface{}, 0, len(items))
 
@@ -28,7 +34,13 @@ func list(store jstore.JStore, provider EntityProvider, withLinks WithLinks, url
 	}
 
 	return func(w Response, r Request) {
-		items, err := store.FindN(r.Project, r.DocumentType, ListMaxResults)
+		limit, options, err := extractor(r)
+		if err != nil {
+			w.SendError(err)
+			return
+		}
+
+		items, err := store.FindN(r.Project, r.DocumentType, limit, options...)
 		if err != nil {
 			w.SendError(err)
 		}

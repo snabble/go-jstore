@@ -1,7 +1,9 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/google/uuid"
@@ -22,6 +24,23 @@ func Test_Integration(t *testing.T) {
 		allPermited,
 		allPermited,
 		allPermited,
+		func(r Request) (limit int, query []jstore.Option, err error) {
+			queries := r.OriginalRequest.URL.Query()
+			limitStr, ok := queries["limit"]
+			limit = 1000
+			if ok {
+				limit, _ = strconv.Atoi(limitStr[0])
+			}
+
+			propertyQuery, ok := queries["property"]
+			if ok {
+				query = []jstore.Option{jstore.Eq("property", propertyQuery[0])}
+			}
+
+			fmt.Println(limit, query)
+
+			return limit, query, nil
+		},
 		func(r Request) (string, interface{}, error) {
 			id := r.ID
 			if id == "" {
@@ -42,21 +61,44 @@ func Test_Integration(t *testing.T) {
 
 	var location string
 	t.Run("create", func(t *testing.T) {
-		body := `{"message":"hello world"}`
+		body := `{"message":"hello world", "property": "nice"}`
 
 		response := postRequest(router, "http://test/project/entity", body)
 
 		require.Equal(t, http.StatusCreated, response.Code)
-		assert.JSONEq(t, `{ "message": "hello world" }`, response.Body.String())
+		assert.JSONEq(t, `{ "message": "hello world", "property": "nice" }`, response.Body.String())
 
 		location = response.Header().Get("Location")
+
 	})
 
 	t.Run("get", func(t *testing.T) {
 		response := getRequest(router, location)
 
 		require.Equal(t, http.StatusOK, response.Code)
-		assert.JSONEq(t, `{ "message": "hello world" }`, response.Body.String())
+		assert.JSONEq(t, `{ "message": "hello world", "property": "nice" }`, response.Body.String())
+	})
+
+	// create more entities
+	postRequest(router, "http://test/project/entity", `{"message":"hello mars", "property": "ok"}`)
+	postRequest(router, "http://test/project/entity", `{"message":"hello saturn", "property": "notok"}`)
+
+	t.Run("list with limit", func(t *testing.T) {
+		response := getRequest(router, "http://test/project/entity?limit=1")
+
+		require.Equal(t, http.StatusOK, response.Code)
+	})
+
+	t.Run("list with query", func(t *testing.T) {
+		response := getRequest(router, "http://test/project/entity?property=nice")
+
+		require.Equal(t, http.StatusOK, response.Code)
+		assert.JSONEq(t, `{
+	"resources": [{ "message": "hello world", "property": "nice" }],
+	"links": {"self": {"href": "/project/entity"}}
+}`,
+			response.Body.String(),
+		)
 	})
 
 	t.Run("update", func(t *testing.T) {
