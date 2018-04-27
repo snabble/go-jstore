@@ -12,8 +12,8 @@ import (
 
 	"github.com/olivere/elastic"
 
-	. "github.com/snabble/go-jstore"
-	. "github.com/stretchr/testify/assert"
+	"github.com/snabble/go-jstore"
+	"github.com/stretchr/testify/assert"
 )
 
 func esTestURL() string {
@@ -43,8 +43,8 @@ var (
 
 func Test_Health_OK(t *testing.T) {
 	validStore, err := NewElasticStore(esTestURL())
-	NoError(t, err)
-	NoError(t, validStore.HealthCheck())
+	assert.NoError(t, err)
+	assert.NoError(t, validStore.HealthCheck())
 }
 
 func Test_Health_Error(t *testing.T) {
@@ -58,122 +58,158 @@ func Test_Health_Error(t *testing.T) {
 		elastic.SetURL(server.URL),
 		elastic.SetHealthcheck(false),
 		elastic.SetSniff(false))
-	NoError(t, err)
+	assert.NoError(t, err)
 
 	invalidStore := &ElasticStore{
 		client: esClient,
 	}
 
-	Error(t, invalidStore.HealthCheck())
+	assert.Error(t, invalidStore.HealthCheck())
 }
 
 func Test_BasicStoring(t *testing.T) {
 	project := randStringBytes(10)
-	personBucket, err := NewBucket("elastic", esTestURL(),
-		project, "person", SyncUpdates)
-	NoError(t, err)
+	personBucket, err := jstore.NewBucket("elastic", esTestURL(),
+		project, "person", jstore.SyncUpdates)
+	assert.NoError(t, err)
 
-	NoError(t, personBucket.Marshal(ford, "ford"))
-	NoError(t, personBucket.Marshal(zaphod, "zaphod"))
-	NoError(t, personBucket.Marshal(zaphod, "foo"))
+	_, err = personBucket.Marshal(ford, jstore.NewID(project, "persons", "ford"))
+	assert.NoError(t, err)
+	_, err = personBucket.Marshal(zaphod, jstore.NewID(project, "persons", "zaphod"))
+	assert.NoError(t, err)
+	_, err = personBucket.Marshal(zaphod, jstore.NewID(project, "persons", "foo"))
+	assert.NoError(t, err)
 
-	spaceshipBucket, err := NewBucket("elastic", esTestURL(),
-		project, "spaceship", SyncUpdates)
-	NoError(t, err)
+	spaceshipBucket, err := jstore.NewBucket("elastic", esTestURL(),
+		project, "spaceship", jstore.SyncUpdates)
+	assert.NoError(t, err)
 
-	NoError(t, spaceshipBucket.Marshal(heartOfGold, "heartOfGold"))
-	NoError(t, spaceshipBucket.Marshal(heartOfGold, "foo"))
+	_, err = spaceshipBucket.Marshal(heartOfGold, jstore.NewID(project, "persons", "heartOfGold"))
+	assert.NoError(t, err)
+	_, err = spaceshipBucket.Marshal(heartOfGold, jstore.NewID(project, "persons", "foo"))
+	assert.NoError(t, err)
 
 	var result Person
 
 	// find one person by id
-	err = personBucket.Unmarshal(&result, Id("ford"))
-	NoError(t, err)
-	Equal(t, ford, result)
+	err = personBucket.Unmarshal(&result, jstore.Id("ford"))
+	assert.NoError(t, err)
+	assert.Equal(t, ford, result)
 
 	// find one person by id
-	err = personBucket.Unmarshal(&result, Id("foo"))
-	NoError(t, err)
-	Equal(t, zaphod, result)
+	err = personBucket.Unmarshal(&result, jstore.Id("foo"))
+	assert.NoError(t, err)
+	assert.Equal(t, zaphod, result)
+}
+
+func Test_OptimisticLocking_Update(t *testing.T) {
+	project := randStringBytes(10)
+	store, _ := jstore.NewStore("elastic", esTestURL(), jstore.SyncUpdates)
+
+	id, _ := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+
+	assert.Equal(t, int64(1), id.Version)
+
+	updatedID, _ := store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
+
+	assert.Equal(t, int64(2), updatedID.Version)
+
+	_, err := store.Marshal(Person{"Ford Prefect", 41, day("1980-01-01")}, id)
+
+	assert.Equal(t, jstore.OptimisticLockingError, err)
+}
+
+func Test_OptimisticLocking_Delete(t *testing.T) {
+	project := randStringBytes(10)
+	store, _ := jstore.NewStore("elastic", esTestURL(), jstore.SyncUpdates)
+
+	id, _ := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
+
+	err := store.Delete(id)
+
+	assert.Equal(t, jstore.OptimisticLockingError, err)
 }
 
 func Test_FindInMissingProject(t *testing.T) {
-	b, err := NewBucket("elastic", esTestURL(),
-		randStringBytes(10), "person", SyncUpdates)
-	NoError(t, err)
+	b, err := jstore.NewBucket("elastic", esTestURL(), randStringBytes(10), "person", jstore.SyncUpdates)
+	assert.NoError(t, err)
 
 	// find one person by id
-	_, err = b.Find(Id("ford"))
-	Equal(t, NotFound, err)
+	_, err = b.Find(jstore.Id("ford"))
+	assert.Equal(t, jstore.NotFound, err)
 }
 
-func Test_CompatreOptions(t *testing.T) {
-	b, err := NewBucket("elastic", esTestURL(),
-		randStringBytes(10), "person", SyncUpdates)
-	NoError(t, err)
+func Test_CompareOptions(t *testing.T) {
+	project := randStringBytes(10)
+	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", jstore.SyncUpdates)
+	assert.NoError(t, err)
 
-	NoError(t, b.Marshal(ford, "ford"))
-	NoError(t, b.Marshal(marvin, "marvin"))
-	NoError(t, b.Marshal(zaphod, "zaphod"))
+	_, err = b.Marshal(ford, jstore.NewID(project, "persons", "ford"))
+	assert.NoError(t, err)
+	_, err = b.Marshal(marvin, jstore.NewID(project, "persons", "marvin"))
+	assert.NoError(t, err)
+	_, err = b.Marshal(zaphod, jstore.NewID(project, "persons", "zaphod"))
+	assert.NoError(t, err)
 
 	tests := []struct {
 		name     string
-		options  []Option
+		options  []jstore.Option
 		expected *Person
 	}{
 		{
 			"integer equal",
-			[]Option{Eq("age", 42)},
+			[]jstore.Option{jstore.Eq("age", 42)},
 			&ford,
 		},
 		{
 			"string equal",
-			[]Option{Eq("name", "Ford Prefect")},
+			[]jstore.Option{jstore.Eq("name", "Ford Prefect")},
 			&ford,
 		},
 		{
 			" > ",
-			[]Option{Gt("age", 42)},
+			[]jstore.Option{jstore.Gt("age", 42)},
 			&zaphod,
 		},
 		{
 			" > ",
-			[]Option{Gt("age", 4200)},
+			[]jstore.Option{jstore.Gt("age", 4200)},
 			nil,
 		},
 		{
 			" >= ",
-			[]Option{Gte("age", 4200)},
+			[]jstore.Option{jstore.Gte("age", 4200)},
 			&zaphod,
 		},
 		{
 			" < ",
-			[]Option{Lt("age", 42)},
+			[]jstore.Option{jstore.Lt("age", 42)},
 			nil,
 		},
 		{
 			" <= ",
-			[]Option{Lte("age", 42)},
+			[]jstore.Option{jstore.Lte("age", 42)},
 			&ford,
 		},
 		{
 			" gt and lt ",
-			[]Option{Gt("age", 42), Lt("age", 4200)},
+			[]jstore.Option{jstore.Gt("age", 42), jstore.Lt("age", 4200)},
 			&marvin,
 		},
 		{
 			"date =",
-			[]Option{Eq("birthDay", day("2042-01-01"))},
+			[]jstore.Option{jstore.Eq("birthDay", day("2042-01-01"))},
 			&marvin,
 		},
 		{
 			" < on date",
-			[]Option{Lt("birthDay", day("1980-01-01"))},
+			[]jstore.Option{jstore.Lt("birthDay", day("1980-01-01"))},
 			&zaphod,
 		},
 		{
 			" <= and >= on date",
-			[]Option{Lte("birthDay", day("1980-01-01")), Gte("birthDay", day("1980-01-01"))},
+			[]jstore.Option{jstore.Lte("birthDay", day("1980-01-01")), jstore.Gte("birthDay", day("1980-01-01"))},
 			&ford,
 		},
 	}
@@ -182,70 +218,72 @@ func Test_CompatreOptions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 
 			result := &Person{}
-			err = b.Unmarshal(result, test.options...)
+			err = b.Unmarshal(&result, test.options...)
 			if test.expected == nil {
-				Equal(t, NotFound, err)
+				assert.Equal(t, jstore.NotFound, err)
 			} else {
-				NoError(t, err)
-				Equal(t, test.expected, result)
+				assert.NoError(t, err)
+				assert.Equal(t, test.expected, result)
 			}
 		})
 	}
 }
 
 func Test_FindN(t *testing.T) {
-	b, err := NewBucket("elastic", esTestURL(),
-		randStringBytes(10), "person", SyncUpdates)
-	NoError(t, err)
+	project := randStringBytes(10)
+	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", jstore.SyncUpdates)
+	assert.NoError(t, err)
 
 	for i := 0; i < 50; i++ {
 		p := Person{
 			Name: "person-" + strconv.Itoa(i),
 			Age:  i,
 		}
-		err := b.Marshal(p, strconv.Itoa(i))
-		NoError(t, err)
+		_, err := b.Marshal(p, jstore.NewID(project, "person", strconv.Itoa(i)))
+		assert.NoError(t, err)
 	}
 
 	// find a subset
 	docs, err := b.FindN(20)
-	NoError(t, err)
-	Equal(t, 20, len(docs))
+	assert.NoError(t, err)
+	assert.Equal(t, 20, len(docs))
 
 	for _, d := range docs {
 		p := Person{}
 		err = json.Unmarshal([]byte(d.JSON), &p)
-		NoError(t, err)
-		Contains(t, p.Name, "person-")
+		assert.NoError(t, err)
+		assert.Contains(t, p.Name, "person-")
 	}
 
 	// find all
 	docs, err = b.FindN(1000)
-	NoError(t, err)
-	Equal(t, 50, len(docs))
+	assert.NoError(t, err)
+	assert.Equal(t, 50, len(docs))
 }
 
 func Test_Delete(t *testing.T) {
-	b, err := NewBucket("elastic", esTestURL(),
-		randStringBytes(10), "person", SyncUpdates)
-	NoError(t, err)
+	project := randStringBytes(10)
+	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", jstore.SyncUpdates)
+	assert.NoError(t, err)
 
-	NoError(t, b.Marshal(ford, "ford"))
-	NoError(t, b.Marshal(zaphod, "zaphod"))
+	_, err = b.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	assert.NoError(t, err)
+	_, err = b.Marshal(zaphod, jstore.NewID(project, "person", "zaphod"))
+	assert.NoError(t, err)
 
 	// ford is there
 	var result Person
-	NoError(t, b.Unmarshal(&result, Id("ford")))
+	assert.NoError(t, b.Unmarshal(&result, jstore.Id("ford")))
 
 	// delete ford
-	NoError(t, b.Delete("ford"))
+	assert.NoError(t, b.Delete(jstore.NewID(project, "person", "ford")))
 
 	// fort is away
-	err = b.Unmarshal(&result, Id("ford"))
-	Equal(t, NotFound, err)
+	err = b.Unmarshal(&result, jstore.Id("ford"))
+	assert.Equal(t, jstore.NotFound, err)
 
 	// but zaphod is still there
-	NoError(t, b.Unmarshal(&result, Id("zaphod")))
+	assert.NoError(t, b.Unmarshal(&result, jstore.Id("zaphod")))
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyz"

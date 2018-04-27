@@ -21,7 +21,7 @@ type Request struct {
 }
 
 func (request *Request) EntityID() jstore.EntityID {
-	return jstore.EntityID{request.Project, request.DocumentType, request.ID}
+	return jstore.NewID(request.Project, request.DocumentType, request.ID)
 }
 
 func (request *Request) UnmarshalBody(obj interface{}) error {

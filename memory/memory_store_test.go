@@ -2,13 +2,13 @@ package memory
 
 import (
 	"encoding/json"
-	"math/rand"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/snabble/go-jstore"
-	. "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Person struct {
@@ -17,134 +17,141 @@ type Person struct {
 	BirthDay time.Time `json:"birthDay"`
 }
 
-type Spaceship struct {
-	Name  string `json:"name"`
-	Speed int    `json:"speed"`
-}
-
 var (
-	ford        = Person{"Ford Prefect", 42, day("1980-01-01")}
-	marvin      = Person{"Marvin", 1010, day("2042-01-01")}
-	zaphod      = Person{"Zaphod Beeblebrox", 4200, day("1900-01-01")}
-	heartOfGold = Spaceship{"Heart Of Gold", 99999999}
+	ford   = Person{"Ford Prefect", 42, day("1980-01-01")}
+	marvin = Person{"Marvin", 1010, day("2042-01-01")}
+	zaphod = Person{"Zaphod Beeblebrox", 4200, day("1900-01-01")}
 )
 
 func Test_BasicStoring(t *testing.T) {
-	project := randStringBytes(10)
-	personBucket, err := jstore.NewBucket("memory", "memory", project, "person", jstore.SyncUpdates)
-	NoError(t, err)
+	store, err := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	require.NoError(t, err)
 
-	NoError(t, personBucket.Marshal(ford, "ford"))
-	NoError(t, personBucket.Marshal(zaphod, "zaphod"))
-	NoError(t, personBucket.Marshal(zaphod, "foo"))
+	id, err := store.Marshal(ford, jstore.NewID("project", "person", "ford"))
+	require.NoError(t, err)
+	assert.Equal(t, jstore.EntityID{Project: "project", DocumentType: "person", ID: "ford", Version: 1}, id)
 
-	spaceshipBucket, err := jstore.NewBucket("memory", "memory", project, "spaceship", jstore.SyncUpdates)
-	NoError(t, err)
-
-	NoError(t, spaceshipBucket.Marshal(heartOfGold, "heartOfGold"))
-	NoError(t, spaceshipBucket.Marshal(heartOfGold, "foo"))
-
-	var result Person
+	_, err = store.Marshal(zaphod, jstore.NewID("project", "person", "zaphod"))
+	require.NoError(t, err)
+	_, err = store.Marshal(zaphod, jstore.NewID("project", "person", "zaphod"))
+	require.NoError(t, err)
+	_, err = store.Marshal(zaphod, jstore.NewID("project", "person", "foo"))
+	require.NoError(t, err)
 
 	// find one person by id
-	err = personBucket.Unmarshal(&result, jstore.Id("ford"))
-	NoError(t, err)
-	Equal(t, ford, result)
+	result := Person{}
+	err = store.Unmarshal(&jstore.Entity{ObjectRef: &result}, "project", "person", jstore.Id("ford"))
+	require.NoError(t, err)
+	assert.Equal(t, ford, result)
 
 	// find one person by id
-	err = personBucket.Unmarshal(&result, jstore.Id("foo"))
-	NoError(t, err)
-	Equal(t, zaphod, result)
+	err = store.Unmarshal(&result, "project", "person", jstore.Id("foo"))
+	require.NoError(t, err)
+	assert.Equal(t, zaphod, result)
+}
+
+func Test_OptimisticLocking_Update(t *testing.T) {
+	store, _ := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+
+	id, _ := store.Marshal(ford, jstore.NewID("project", "person", "ford"))
+
+	assert.Equal(t, int64(1), id.Version)
+
+	updatedID, _ := store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
+
+	assert.Equal(t, int64(2), updatedID.Version)
+
+	conflictedID, err := store.Marshal(Person{"Ford Prefect", 41, day("1980-01-01")}, id)
+
+	assert.Equal(t, int64(2), conflictedID.Version)
+	assert.Equal(t, jstore.OptimisticLockingError, err)
+}
+
+func Test_OptimisticLocking_Delete(t *testing.T) {
+	store, _ := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+
+	id, _ := store.Marshal(ford, jstore.NewID("project", "person", "ford"))
+	store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
+
+	err := store.Delete(id)
+
+	assert.Equal(t, jstore.OptimisticLockingError, err)
 }
 
 func Test_FindInMissingProject(t *testing.T) {
-	b, err := jstore.NewBucket("memory", "memory", randStringBytes(10), "person", jstore.SyncUpdates)
-	NoError(t, err)
+	store, _ := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
 
-	// find one person by id
-	_, err = b.Find(jstore.Id("ford"))
-	Equal(t, jstore.NotFound, err)
+	_, err := store.Find("project", "person", jstore.Id("ford"))
+
+	assert.Equal(t, jstore.NotFound, err)
 }
 
 func Test_CompareOptions(t *testing.T) {
-	b, err := jstore.NewBucket("memory", "memory", randStringBytes(10), "person", jstore.SyncUpdates)
-	NoError(t, err)
+	store, err := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	require.NoError(t, err)
 
-	NoError(t, b.Marshal(ford, "ford"))
-	NoError(t, b.Marshal(marvin, "marvin"))
-	NoError(t, b.Marshal(zaphod, "zaphod"))
+	store.Marshal(ford, jstore.NewID("project", "person", "ford"))
+	store.Marshal(marvin, jstore.NewID("project", "person", "marvin"))
+	store.Marshal(zaphod, jstore.NewID("project", "person", "zaphod"))
 
 	result := Person{}
-	err = b.Unmarshal(&result, jstore.Eq("name", "Ford Prefect"))
-	NoError(t, err)
-	Equal(t, ford, result)
+	err = store.Unmarshal(&result, "project", "person", jstore.Eq("name", "Ford Prefect"))
+
+	require.NoError(t, err)
+	assert.Equal(t, ford, result)
 }
 
 func Test_FindN(t *testing.T) {
-	b, err := jstore.NewBucket("memory", "memory", randStringBytes(10), "person", jstore.SyncUpdates)
-	NoError(t, err)
+	store, err := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	require.NoError(t, err)
 
 	for i := 0; i < 50; i++ {
 		p := Person{
 			Name: "person-" + strconv.Itoa(i),
 			Age:  i,
 		}
-		err := b.Marshal(p, strconv.Itoa(i))
-		NoError(t, err)
+		_, err := store.Marshal(p, jstore.NewID("project", "person", strconv.Itoa(i)))
+		require.NoError(t, err)
 	}
 
 	// find a subset
-	docs, err := b.FindN(20)
-	NoError(t, err)
-	Equal(t, 20, len(docs))
+	docs, err := store.FindN("project", "person", 20)
+	require.NoError(t, err)
+	assert.Equal(t, 20, len(docs))
 
 	for _, d := range docs {
 		p := Person{}
 		err = json.Unmarshal([]byte(d.JSON), &p)
-		NoError(t, err)
-		Contains(t, p.Name, "person-")
+		require.NoError(t, err)
+		assert.Contains(t, p.Name, "person-")
 	}
 
 	// find all
-	docs, err = b.FindN(1000)
-	NoError(t, err)
-	Equal(t, 50, len(docs))
+	docs, err = store.FindN("project", "person", 1000)
+	require.NoError(t, err)
+	assert.Equal(t, 50, len(docs))
 }
 
 func Test_Delete(t *testing.T) {
-	b, err := jstore.NewBucket("memory", "memory", randStringBytes(10), "person", jstore.SyncUpdates)
-	NoError(t, err)
+	store, err := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	require.NoError(t, err)
 
-	NoError(t, b.Marshal(ford, "ford"))
-	NoError(t, b.Marshal(zaphod, "zaphod"))
+	store.Marshal(ford, jstore.NewID("project", "person", "ford"))
+	store.Marshal(zaphod, jstore.NewID("project", "person", "zaphod"))
 
 	// ford is there
 	var result Person
-	NoError(t, b.Unmarshal(&result, jstore.Id("ford")))
+	require.NoError(t, store.Unmarshal(&result, "project", "person", jstore.Id("ford")))
 
 	// delete ford
-	NoError(t, b.Delete("ford"))
+	require.NoError(t, store.Delete(jstore.NewID("project", "person", "ford")))
 
-	// fort is away
-	err = b.Unmarshal(&result, jstore.Id("ford"))
-	Equal(t, jstore.NotFound, err)
+	// ford is away
+	err = store.Unmarshal(&result, "project", "person", jstore.Id("ford"))
+	assert.Equal(t, jstore.NotFound, err)
 
 	// but zaphod is still there
-	NoError(t, b.Unmarshal(&result, jstore.Id("zaphod")))
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyz"
-
-func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
-}
-
-func randStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
+	require.NoError(t, store.Unmarshal(&result, "project", "person", jstore.Id("zaphod")))
 }
 
 func day(theDay string) time.Time {

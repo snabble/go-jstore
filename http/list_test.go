@@ -32,9 +32,9 @@ func Test_List_Success(t *testing.T) {
 		},
 		documentTypes,
 	)
-	store.Marshal(TestEntity{Message: "hello world"}, jstore.ID("project", "entity", "earth"))
-	store.Marshal(TestEntity{Message: "hello saturn"}, jstore.ID("project", "entity", "saturn"))
-	store.Marshal(TestEntity{Message: "hello mars"}, jstore.ID("project", "entity", "mars"))
+	store.Marshal(TestEntity{Message: "hello world"}, jstore.NewID("project", "entity", "earth"))
+	store.Marshal(TestEntity{Message: "hello saturn"}, jstore.NewID("project", "entity", "saturn"))
+	store.Marshal(TestEntity{Message: "hello mars"}, jstore.NewID("project", "entity", "mars"))
 
 	response := getRequest(router, "http://test/project/entity")
 
