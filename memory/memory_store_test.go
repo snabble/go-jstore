@@ -94,11 +94,80 @@ func Test_CompareOptions(t *testing.T) {
 	store.Marshal(marvin, jstore.NewID("project", "person", "marvin"))
 	store.Marshal(zaphod, jstore.NewID("project", "person", "zaphod"))
 
-	result := Person{}
-	err = store.Unmarshal(&result, "project", "person", jstore.Eq("name", "Ford Prefect"))
+	tests := []struct {
+		name     string
+		options  []jstore.Option
+		expected *Person
+	}{
+		{
+			"integer equal",
+			[]jstore.Option{jstore.Eq("age", 42)},
+			&ford,
+		},
+		{
+			"string equal",
+			[]jstore.Option{jstore.Eq("name", "Ford Prefect")},
+			&ford,
+		},
+		{
+			" > ",
+			[]jstore.Option{jstore.Gt("age", 1010)},
+			&zaphod,
+		},
+		{
+			" > ",
+			[]jstore.Option{jstore.Gt("age", 4200)},
+			nil,
+		},
+		{
+			" >= ",
+			[]jstore.Option{jstore.Gte("age", 4200)},
+			&zaphod,
+		},
+		{
+			" < ",
+			[]jstore.Option{jstore.Lt("age", 42)},
+			nil,
+		},
+		{
+			" <= ",
+			[]jstore.Option{jstore.Lte("age", 42)},
+			&ford,
+		},
+		{
+			" gt and lt ",
+			[]jstore.Option{jstore.Gt("age", 42), jstore.Lt("age", 4200)},
+			&marvin,
+		},
+		{
+			"date =",
+			[]jstore.Option{jstore.Eq("birthDay", day("2042-01-01"))},
+			&marvin,
+		},
+		{
+			" < on date",
+			[]jstore.Option{jstore.Lt("birthDay", day("1980-01-01"))},
+			&zaphod,
+		},
+		{
+			" <= and >= on date",
+			[]jstore.Option{jstore.Lte("birthDay", day("1980-01-01")), jstore.Gte("birthDay", day("1980-01-01"))},
+			&ford,
+		},
+	}
 
-	require.NoError(t, err)
-	assert.Equal(t, ford, result)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := &Person{}
+			err = store.Unmarshal(&result, "project", "person", test.options...)
+			if test.expected == nil {
+				assert.Equal(t, jstore.NotFound, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.expected, result)
+			}
+		})
+	}
 }
 
 func Test_FindN(t *testing.T) {

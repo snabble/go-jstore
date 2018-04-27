@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"testing"
@@ -36,8 +35,6 @@ func Test_Integration(t *testing.T) {
 			if ok {
 				query = []jstore.Option{jstore.Eq("property", propertyQuery[0])}
 			}
-
-			fmt.Println(limit, query)
 
 			return limit, query, nil
 		},
