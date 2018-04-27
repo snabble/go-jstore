@@ -21,7 +21,8 @@ func Test_Get_Success(t *testing.T) {
 		allPermited,
 		allPermited,
 		allPermited,
-		nullExtractor,
+		nullQueryExtractor,
+		nullBodyExtractor,
 		func() interface{} {
 			return &TestEntity{}
 		},
@@ -57,7 +58,8 @@ func Test_Get_Failure(t *testing.T) {
 		allPermited,
 		allPermited,
 		allPermited,
-		nullExtractor,
+		nullQueryExtractor,
+		nullBodyExtractor,
 		func() interface{} {
 			return TestEntity{}
 		},
@@ -81,7 +83,8 @@ func Test_Get_ChecksPermits(t *testing.T) {
 		nobodyPermited,
 		allPermited,
 		allPermited,
-		nullExtractor,
+		nullQueryExtractor,
+		nullBodyExtractor,
 		nullEntity,
 		nullWithLinks,
 		documentTypes,

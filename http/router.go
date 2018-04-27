@@ -10,6 +10,7 @@ import (
 )
 
 type Permit func(request Request) bool
+type QueryExtractor func(r Request) (limit int, query []jstore.Option, err error)
 type BodyExtractor func(r Request) (string, interface{}, error)
 type EntityProvider func() interface{}
 type WithLinks func(entity interface{}, links Links) interface{}
@@ -21,7 +22,8 @@ func Expose(
 	canRead Permit,
 	canUpdate Permit,
 	canDelete Permit,
-	extractor BodyExtractor,
+	queryExtractor QueryExtractor,
+	bodyExtractor BodyExtractor,
 	provider EntityProvider,
 	withLinks WithLinks,
 	allowedDocumentTypes []string,
@@ -41,10 +43,10 @@ func Expose(
 
 	urls := NewURLBuilder(router)
 
-	register("create", "/{project}/{documentType}", http.MethodPost, canCreate, create(store, extractor, withLinks, urls))
+	register("create", "/{project}/{documentType}", http.MethodPost, canCreate, create(store, bodyExtractor, withLinks, urls))
 	register("read", "/{project}/{documentType}/{id}", http.MethodGet, canRead, get(store, provider, withLinks, urls))
-	register("list", "/{project}/{documentType}", http.MethodGet, canRead, list(store, provider, withLinks, urls))
-	register("update", "/{project}/{documentType}/{id}", http.MethodPut, canUpdate, update(store, extractor, withLinks, urls))
+	register("list", "/{project}/{documentType}", http.MethodGet, canRead, list(store, provider, queryExtractor, withLinks, urls))
+	register("update", "/{project}/{documentType}/{id}", http.MethodPut, canUpdate, update(store, bodyExtractor, withLinks, urls))
 	register("delete", "/{project}/{documentType}/{id}", http.MethodDelete, canDelete, delete(store))
 
 	return router

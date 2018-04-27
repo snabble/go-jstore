@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+
+	jstore "github.com/snabble/go-jstore"
 )
 
 type TestEntity struct {
-	Message string `json:"message"`
+	Message  string `json:"message"`
+	Property string `json:"property,omitempty"`
 }
 
 type TestEntityWithLinks struct {
@@ -16,11 +19,14 @@ type TestEntityWithLinks struct {
 }
 
 var (
-	documentTypes  = []string{"entity"}
-	allPermited    = func(r Request) bool { return true }
-	nobodyPermited = func(r Request) bool { return false }
-	nullExtractor  = func(r Request) (string, interface{}, error) {
+	documentTypes     = []string{"entity"}
+	allPermited       = func(r Request) bool { return true }
+	nobodyPermited    = func(r Request) bool { return false }
+	nullBodyExtractor = func(r Request) (string, interface{}, error) {
 		return "id", TestEntity{Message: ""}, nil
+	}
+	nullQueryExtractor = func(r Request) (limit int, query []jstore.Option, err error) {
+		return 100, []jstore.Option{}, nil
 	}
 	nullEntity = func() interface{} {
 		return TestEntity{}

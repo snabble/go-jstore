@@ -21,6 +21,7 @@ func Test_Delete_Success(t *testing.T) {
 		allPermited,
 		allPermited,
 		allPermited,
+		nullQueryExtractor,
 		func(r Request) (string, interface{}, error) {
 			return "id", TestEntity{Message: "hello saturn"}, nil
 		},
@@ -53,7 +54,8 @@ func Test_Delete_ChecksPermits(t *testing.T) {
 		allPermited,
 		allPermited,
 		nobodyPermited,
-		nullExtractor,
+		nullQueryExtractor,
+		nullBodyExtractor,
 		nullEntity,
 		nullWithLinks,
 		documentTypes,
