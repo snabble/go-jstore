@@ -43,9 +43,11 @@ func list(
 		items, err := store.FindN(r.Project, r.DocumentType, limit, options...)
 		if err != nil {
 			w.SendError(err)
+			return
 		}
 		if len(items) == 0 {
 			w.SendError(jstore.NotFound)
+			return
 		}
 
 		entities, err := toResources(items)
