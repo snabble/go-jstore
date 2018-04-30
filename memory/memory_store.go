@@ -2,6 +2,7 @@ package memory
 
 import (
 	"sync"
+	"time"
 
 	"encoding/json"
 
@@ -38,16 +39,109 @@ func (item *storageItem) matches(options ...jstore.Option) (bool, error) {
 		case jstore.IdOption:
 			result = result && (item.entity.ID == option.Value)
 		case jstore.CompareOption:
-			if option.Operation == "=" {
-				result = result && (item.object[option.Property] == option.Value)
-			} else {
-				return false, errors.New("unsupported compare option: " + option.Operation)
+			switch option.Value.(type) {
+			case string:
+				value, ok := item.object[option.Property].(string)
+				if !ok {
+					return false, errors.New("should be string")
+				}
+
+				switch option.Operation {
+				case "=":
+					result = result && (value == option.Value)
+				default:
+					return false, errors.New("unsupported compare option: " + option.Operation)
+				}
+			case time.Time:
+				value, ok := item.object[option.Property].(string)
+				if !ok {
+					return false, errors.New("should be string")
+				}
+
+				t, err := time.Parse("2006-01-02T15:04:05Z", value)
+				if err != nil {
+					return false, errors.Wrap(err, "not a date")
+				}
+
+				s := option.Value.(time.Time)
+
+				switch option.Operation {
+				case "=":
+					result = result && (t == s)
+				case "<":
+					result = result && (t.Before(s))
+				case "<=":
+					result = result && (t.Before(s) || t == s)
+				case ">":
+					result = result && (s.Before(t))
+				case ">=":
+					result = result && (s.Before(t) || s == t)
+				default:
+					return false, errors.New("unsupported compare option: " + option.Operation)
+				}
+
+			case int:
+				t, ok := item.object[option.Property].(float64)
+				if !ok {
+					return false, errors.New("not a number")
+				}
+				s := option.Value.(int)
+				r, err := handleNumber(option.Operation, t, float64(s))
+				if err != nil {
+					return false, err
+				}
+				result = result && r
+
+			case float64:
+				t, ok := item.object[option.Property].(float64)
+				if !ok {
+					return false, errors.New("not a number")
+				}
+				s := option.Value.(float64)
+				r, err := handleNumber(option.Operation, t, s)
+				if err != nil {
+					return false, err
+				}
+				result = result && r
+
+			case int64:
+				t, ok := item.object[option.Property].(float64)
+				if !ok {
+					return false, errors.New("not a number")
+				}
+				s := option.Value.(int64)
+				r, err := handleNumber(option.Operation, t, float64(s))
+				if err != nil {
+					return false, err
+				}
+				result = result && r
+
+			default:
+				return false, errors.New("unsupported type for comparison")
 			}
+
 		default:
 			return false, errors.Errorf("unsupported option: %+v", option)
 		}
 	}
 	return result, nil
+}
+
+func handleNumber(operation string, t, s float64) (bool, error) {
+	switch operation {
+	case "=":
+		return (t == s), nil
+	case "<":
+		return (t < s), nil
+	case "<=":
+		return (t <= s), nil
+	case ">":
+		return (t > s), nil
+	case ">=":
+		return (t >= s), nil
+	default:
+		return false, errors.New("unsupported compare option: " + operation)
+	}
 }
 
 type MemoryStore struct {
