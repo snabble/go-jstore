@@ -74,6 +74,11 @@ func NewStore(driverName, dataSourceName string, options ...StoreOption) (JStore
 		return nil, errors.New("No jstore provider for type: " + driverName)
 	}
 	store, err := p(dataSourceName, options...)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &marshalStore{
 		Store: store,
 	}, err
