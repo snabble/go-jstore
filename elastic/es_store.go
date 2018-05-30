@@ -13,7 +13,10 @@ import (
 var DriverName = "elastic"
 
 func init() {
-	jstore.RegisterProvider("elastic", NewElasticStore)
+	provider := func(baseURL string, options ...jstore.StoreOption) (jstore.Store, error) {
+		return NewElasticStore(baseURL, options...)
+	}
+	jstore.RegisterProvider("elastic", provider)
 }
 
 type ElasticStore struct {
@@ -21,7 +24,7 @@ type ElasticStore struct {
 	syncUpdates bool
 }
 
-func NewElasticStore(baseURL string, options ...jstore.StoreOption) (jstore.Store, error) {
+func NewElasticStore(baseURL string, options ...jstore.StoreOption) (*ElasticStore, error) {
 	client, err := elastic.NewClient(elastic.SetURL(baseURL))
 
 	return &ElasticStore{
@@ -152,6 +155,12 @@ func (store *ElasticStore) FindN(project, documentType string, maxCount int, opt
 	return results, nil
 }
 
+func (store *ElasticStore) SearchIn(project, documentType string) *elastic.SearchService {
+	return store.client.
+		Search(indexName(project, documentType)).
+		Type(documentType)
+}
+
 func (store *ElasticStore) cntx() context.Context {
 	return context.Background()
 }
@@ -203,9 +212,7 @@ func (store *ElasticStore) createSearch(project, documentType string, options ..
 		}
 	}
 
-	return store.client.
-		Search(indexName(project, documentType)).
-		Type(documentType).
+	return store.SearchIn(project, documentType).
 		Version(true).
 		Query(boolQuery), nil
 }

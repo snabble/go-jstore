@@ -1,6 +1,7 @@
 package elastic
 
 import (
+	"context"
 	"encoding/json"
 	"math/rand"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/snabble/go-jstore"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func esTestURL() string {
@@ -284,6 +286,29 @@ func Test_Delete(t *testing.T) {
 
 	// but zaphod is still there
 	assert.NoError(t, b.Unmarshal(&result, jstore.Id("zaphod")))
+}
+
+func Test_CustomSearch(t *testing.T) {
+	project := randStringBytes(10)
+	esStore, err := NewElasticStore(esTestURL(), jstore.SyncUpdates)
+	require.NoError(t, err)
+	store := jstore.WrapStore(esStore)
+
+	_, err = store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	assert.NoError(t, err)
+	_, err = store.Marshal(marvin, jstore.NewID(project, "person", "marvin"))
+	assert.NoError(t, err)
+
+	search := esStore.SearchIn(project, "person")
+	require.NotNil(t, search)
+
+	query := elastic.NewBoolQuery()
+	query.Must(elastic.NewTermQuery("name.keyword", "Marvin"))
+	search.Query(query)
+
+	resp, err := search.Do(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), resp.Hits.TotalHits)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyz"
