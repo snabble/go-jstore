@@ -79,9 +79,13 @@ func NewStore(driverName, dataSourceName string, options ...StoreOption) (JStore
 		return nil, err
 	}
 
+	return WrapStore(store), nil
+}
+
+func WrapStore(store Store) JStore {
 	return &marshalStore{
 		Store: store,
-	}, err
+	}
 }
 
 func NewBucket(driverName, dataSourceName, project, documentType string, options ...StoreOption) (Bucket, error) {
