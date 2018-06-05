@@ -35,6 +35,7 @@ func Test_Create_Success(t *testing.T) {
 		},
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 	body := `{"message":"hello world"}`
 
@@ -88,6 +89,7 @@ func Test_Create_ExtractionErrors(t *testing.T) {
 				func() interface{} { return TestEntity{} },
 				nullWithLinks,
 				documentTypes,
+				map[string]string{},
 			)
 			body := `{"message":"hello world"}`
 
@@ -114,6 +116,7 @@ func Test_Create_ChecksPermits(t *testing.T) {
 		nullEntity,
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := postRequest(router, "http://test/project/entity", `{"message":"hello world"}`)

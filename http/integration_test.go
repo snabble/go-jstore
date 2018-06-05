@@ -54,13 +54,14 @@ func Test_Integration(t *testing.T) {
 		},
 		nullWithLinks,
 		documentTypes,
+		map[string]string{"entity": "entities"},
 	)
 
 	var location string
 	t.Run("create", func(t *testing.T) {
 		body := `{"message":"hello world", "property": "nice"}`
 
-		response := postRequest(router, "http://test/project/entity", body)
+		response := postRequest(router, "http://test/project/entities", body)
 
 		require.Equal(t, http.StatusCreated, response.Code)
 		assert.JSONEq(t, `{ "message": "hello world", "property": "nice" }`, response.Body.String())
@@ -77,22 +78,22 @@ func Test_Integration(t *testing.T) {
 	})
 
 	// create more entities
-	postRequest(router, "http://test/project/entity", `{"message":"hello mars", "property": "ok"}`)
-	postRequest(router, "http://test/project/entity", `{"message":"hello saturn", "property": "notok"}`)
+	postRequest(router, "http://test/project/entities", `{"message":"hello mars", "property": "ok"}`)
+	postRequest(router, "http://test/project/entities", `{"message":"hello saturn", "property": "notok"}`)
 
 	t.Run("list with limit", func(t *testing.T) {
-		response := getRequest(router, "http://test/project/entity?limit=1")
+		response := getRequest(router, "http://test/project/entities?limit=1")
 
 		require.Equal(t, http.StatusOK, response.Code)
 	})
 
 	t.Run("list with query", func(t *testing.T) {
-		response := getRequest(router, "http://test/project/entity?property=nice")
+		response := getRequest(router, "http://test/project/entities?property=nice")
 
 		require.Equal(t, http.StatusOK, response.Code)
 		assert.JSONEq(t, `{
 	"resources": [{ "message": "hello world", "property": "nice" }],
-	"links": {"self": {"href": "/project/entity"}}
+	"links": {"self": {"href": "/project/entities"}}
 }`,
 			response.Body.String(),
 		)

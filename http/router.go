@@ -27,6 +27,7 @@ func Expose(
 	provider EntityProvider,
 	withLinks WithLinks,
 	allowedDocumentTypes []string,
+	resourceNames map[string]string,
 ) *mux.Router {
 
 	register := func(name, path, method string, permit Permit, handler func(w Response, r Request)) {
@@ -35,19 +36,20 @@ func Expose(
 				permit,
 				handler,
 				allowedDocumentTypes,
+				resourceNames,
 			),
 		).
 			Methods(method).
 			Name(name)
 	}
 
-	urls := NewURLBuilder(router)
+	urls := NewURLBuilder(router, resourceNames)
 
-	register("create", "/{project}/{documentType}", http.MethodPost, canCreate, create(store, bodyExtractor, withLinks, urls))
-	register("read", "/{project}/{documentType}/{id}", http.MethodGet, canRead, get(store, provider, withLinks, urls))
-	register("list", "/{project}/{documentType}", http.MethodGet, canRead, list(store, provider, queryExtractor, withLinks, urls))
-	register("update", "/{project}/{documentType}/{id}", http.MethodPut, canUpdate, update(store, bodyExtractor, withLinks, urls))
-	register("delete", "/{project}/{documentType}/{id}", http.MethodDelete, canDelete, delete(store))
+	register("create", "/{project}/{resource}", http.MethodPost, canCreate, create(store, bodyExtractor, withLinks, urls))
+	register("read", "/{project}/{resource}/{id}", http.MethodGet, canRead, get(store, provider, withLinks, urls))
+	register("list", "/{project}/{resource}", http.MethodGet, canRead, list(store, provider, queryExtractor, withLinks, urls))
+	register("update", "/{project}/{resource}/{id}", http.MethodPut, canUpdate, update(store, bodyExtractor, withLinks, urls))
+	register("delete", "/{project}/{resource}/{id}", http.MethodDelete, canDelete, delete(store))
 
 	return router
 }
@@ -56,18 +58,20 @@ func createHandler(
 	permit Permit,
 	handler func(w Response, r Request),
 	allowedDocumentTypes []string,
+	resourceNames map[string]string,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		project, ok := verifyProject(w, r)
 		if !ok {
 			return
 		}
-		documentType, ok := verifyDocumentType(w, r)
+		resource, ok := verifyResource(w, r)
 		if !ok {
 			return
 		}
+		documentType := mapResourceToDocumentType(resourceNames, resource)
 
-		id, _ := mux.Vars(r)["id"]
+		id := mux.Vars(r)["id"]
 
 		if !contains(allowedDocumentTypes, documentType) {
 			sendError(w, errors.New("not found"), http.StatusNotFound)
@@ -93,20 +97,31 @@ func verifyProject(w http.ResponseWriter, r *http.Request) (string, bool) {
 		return "", false
 	}
 
-	return string(t), true
+	return t, true
 }
 
-// verifyDocumentType checks, that a parameter with the name
-// 'documentType' exists. Otherwise, it send an error to the client
-func verifyDocumentType(w http.ResponseWriter, r *http.Request) (string, bool) {
-	t, exist := mux.Vars(r)["documentType"]
+// verifyResource checks, that a parameter with the name
+// 'resource' exists. Otherwise, it send an error to the client
+func verifyResource(w http.ResponseWriter, r *http.Request) (string, bool) {
+	t, exist := mux.Vars(r)["resource"]
 
 	if !exist || t == "" {
-		sendError(w, errors.New("documentType parameter missing"), http.StatusBadRequest)
+		sendError(w, errors.New("not found"), http.StatusNotFound)
 		return "", false
 	}
 
-	return string(t), true
+	return t, true
+}
+
+// mapResourceToDocumentType selects the documentType associated with
+// the resource
+func mapResourceToDocumentType(mapping map[string]string, param string) string {
+	for documentType, resource := range mapping {
+		if resource == param {
+			return documentType
+		}
+	}
+	return param
 }
 
 func sendError(w http.ResponseWriter, err error, status int) bool {

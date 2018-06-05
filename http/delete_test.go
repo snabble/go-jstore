@@ -30,6 +30,7 @@ func Test_Delete_Success(t *testing.T) {
 		},
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 	_, err := store.Marshal(TestEntity{Message: "hello world"}, jstore.NewID("project", "entity", "id"))
 	require.NoError(t, err)
@@ -59,6 +60,7 @@ func Test_Delete_ChecksPermits(t *testing.T) {
 		nullEntity,
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := deleteRequest(router, "http://test/project/entity/id")

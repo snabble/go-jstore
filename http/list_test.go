@@ -32,6 +32,7 @@ func Test_List_Success(t *testing.T) {
 			return TestEntityWithLinks{*entity.(*TestEntity), links}
 		},
 		documentTypes,
+		map[string]string{},
 	)
 	store.Marshal(TestEntity{Message: "hello world"}, jstore.NewID("project", "entity", "earth"))
 	store.Marshal(TestEntity{Message: "hello saturn"}, jstore.NewID("project", "entity", "saturn"))
@@ -85,6 +86,7 @@ func Test_List_Success_Query_Limit(t *testing.T) {
 			return TestEntityWithLinks{*entity.(*TestEntity), links}
 		},
 		documentTypes,
+		map[string]string{},
 	)
 	store.Marshal(TestEntity{Message: "hello world"}, jstore.NewID("project", "entity", "earth"))
 	store.Marshal(TestEntity{Message: "hello saturn"}, jstore.NewID("project", "entity", "saturn"))
@@ -130,6 +132,7 @@ func Test_List_Success_Query_Options(t *testing.T) {
 			return TestEntityWithLinks{*entity.(*TestEntity), links}
 		},
 		documentTypes,
+		map[string]string{},
 	)
 	store.Marshal(TestEntity{Message: "hello world", Property: "nice"}, jstore.NewID("project", "entity", "earth"))
 	store.Marshal(TestEntity{Message: "hello saturn", Property: "ok"}, jstore.NewID("project", "entity", "saturn"))
@@ -168,6 +171,7 @@ func Test_List_Success_Query_ClientError(t *testing.T) {
 		nullEntity,
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := getRequest(router, "http://test/project/entity")
@@ -192,6 +196,7 @@ func Test_List_Success_Query_InternalError(t *testing.T) {
 		nullEntity,
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := getRequest(router, "http://test/project/entity")
@@ -216,6 +221,7 @@ func Test_List_Empty(t *testing.T) {
 		},
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := getRequest(router, "http://test/not-exists/entity")
@@ -239,6 +245,7 @@ func Test_List_ChecksPermits(t *testing.T) {
 		nullEntity,
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := getRequest(router, "http://test/project/entity")
