@@ -31,6 +31,7 @@ func Test_Update_Success(t *testing.T) {
 		},
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 	_, err := store.Marshal(TestEntity{Message: "hello world"}, jstore.NewID("project", "entity", "id"))
 	require.NoError(t, err)
@@ -67,6 +68,7 @@ func Test_Update_NotFound(t *testing.T) {
 		},
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := putRequest(router, "http://test/project/entity/not-present", `{"message": "hello"}`)
@@ -121,6 +123,7 @@ func Test_Update_ExtractionErrors(t *testing.T) {
 				func() interface{} { return TestEntity{} },
 				nullWithLinks,
 				documentTypes,
+				map[string]string{},
 			)
 			body := `{"message":"hello world"}`
 
@@ -150,6 +153,7 @@ func Test_Update_ValidatesProvidedId(t *testing.T) {
 		},
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := putRequest(router, "http://test/project/entity/another-id", `{"message": "hello"}`)
@@ -173,6 +177,7 @@ func Test_Update_ChecksPermits(t *testing.T) {
 		nullEntity,
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := putRequest(router, "http://test/project/entity/id", "")

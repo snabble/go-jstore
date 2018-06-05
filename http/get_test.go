@@ -30,6 +30,7 @@ func Test_Get_Success(t *testing.T) {
 			return TestEntityWithLinks{*entity.(*TestEntity), links}
 		},
 		documentTypes,
+		map[string]string{},
 	)
 	_, err := store.Marshal(TestEntity{Message: "hello world"}, jstore.NewID("project", "entity", "id"))
 	require.NoError(t, err)
@@ -65,6 +66,7 @@ func Test_Get_Failure(t *testing.T) {
 		},
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := getRequest(router, "http://test/project/entity/not-found")
@@ -88,6 +90,7 @@ func Test_Get_ChecksPermits(t *testing.T) {
 		nullEntity,
 		nullWithLinks,
 		documentTypes,
+		map[string]string{},
 	)
 
 	response := getRequest(router, "http://test/project/entity/id")
