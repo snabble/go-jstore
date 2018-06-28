@@ -3,6 +3,7 @@ package elastic
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -72,7 +73,7 @@ func Test_Health_Error(t *testing.T) {
 func Test_BasicStoring(t *testing.T) {
 	project := randStringBytes(10)
 	personBucket, err := jstore.NewBucket("elastic", esTestURL(),
-		project, "person", jstore.SyncUpdates)
+		project, "person", SyncUpdates())
 	assert.NoError(t, err)
 
 	_, err = personBucket.Marshal(ford, jstore.NewID(project, "persons", "ford"))
@@ -83,7 +84,7 @@ func Test_BasicStoring(t *testing.T) {
 	assert.NoError(t, err)
 
 	spaceshipBucket, err := jstore.NewBucket("elastic", esTestURL(),
-		project, "spaceship", jstore.SyncUpdates)
+		project, "spaceship", SyncUpdates())
 	assert.NoError(t, err)
 
 	_, err = spaceshipBucket.Marshal(heartOfGold, jstore.NewID(project, "persons", "heartOfGold"))
@@ -104,9 +105,63 @@ func Test_BasicStoring(t *testing.T) {
 	assert.Equal(t, zaphod, result)
 }
 
+func Test_TimeBasedIndex(t *testing.T) {
+	now := "2018.06.01"
+	project := randStringBytes(10)
+	personBucket, err := jstore.NewBucket(
+		"elastic",
+		esTestURL(),
+		project,
+		"person",
+		SyncUpdates(),
+		IndexName(func(project, documentType string, matchAll bool) string {
+			prefix := fmt.Sprintf("test-%s-%s-", project, documentType)
+			suffix := now
+			if matchAll {
+				suffix = "*"
+			}
+			return prefix + suffix
+		}),
+	)
+	assert.NoError(t, err)
+
+	_, err = personBucket.Marshal(ford, jstore.NewID(project, "persons", "ford"))
+	assert.NoError(t, err)
+	now = "2018.06.02"
+	_, err = personBucket.Marshal(zaphod, jstore.NewID(project, "persons", "zaphod"))
+	assert.NoError(t, err)
+	now = "2018.06.03"
+	_, err = personBucket.Marshal(zaphod, jstore.NewID(project, "persons", "foo"))
+	assert.NoError(t, err)
+
+	var result Person
+
+	// find one person by id
+	err = personBucket.Unmarshal(&result, jstore.Id("ford"))
+	require.NoError(t, err)
+	assert.Equal(t, ford, result)
+
+	// find one person by id
+	err = personBucket.Unmarshal(&result, jstore.Id("foo"))
+	require.NoError(t, err)
+	assert.Equal(t, zaphod, result)
+
+	// find all
+	list, err := personBucket.FindN(10)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(list))
+
+	// delete
+	err = personBucket.Delete(jstore.NewID(project, "persons", "foo"))
+	require.NoError(t, err)
+
+	err = personBucket.Unmarshal(&result, jstore.Id("foo"))
+	require.Error(t, err)
+}
+
 func Test_OptimisticLocking_Update(t *testing.T) {
 	project := randStringBytes(10)
-	store, _ := jstore.NewStore("elastic", esTestURL(), jstore.SyncUpdates)
+	store, _ := jstore.NewStore("elastic", esTestURL(), SyncUpdates())
 
 	id, _ := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
 
@@ -123,7 +178,7 @@ func Test_OptimisticLocking_Update(t *testing.T) {
 
 func Test_OptimisticLocking_Delete(t *testing.T) {
 	project := randStringBytes(10)
-	store, _ := jstore.NewStore("elastic", esTestURL(), jstore.SyncUpdates)
+	store, _ := jstore.NewStore("elastic", esTestURL(), SyncUpdates())
 
 	id, _ := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
 	store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
@@ -134,7 +189,7 @@ func Test_OptimisticLocking_Delete(t *testing.T) {
 }
 
 func Test_FindInMissingProject(t *testing.T) {
-	b, err := jstore.NewBucket("elastic", esTestURL(), randStringBytes(10), "person", jstore.SyncUpdates)
+	b, err := jstore.NewBucket("elastic", esTestURL(), randStringBytes(10), "person", SyncUpdates())
 	assert.NoError(t, err)
 
 	// find one person by id
@@ -144,7 +199,7 @@ func Test_FindInMissingProject(t *testing.T) {
 
 func Test_CompareOptions(t *testing.T) {
 	project := randStringBytes(10)
-	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", jstore.SyncUpdates)
+	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", SyncUpdates())
 	assert.NoError(t, err)
 
 	_, err = b.Marshal(ford, jstore.NewID(project, "persons", "ford"))
@@ -233,7 +288,7 @@ func Test_CompareOptions(t *testing.T) {
 
 func Test_FindN(t *testing.T) {
 	project := randStringBytes(10)
-	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", jstore.SyncUpdates)
+	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", SyncUpdates())
 	assert.NoError(t, err)
 
 	for i := 0; i < 50; i++ {
@@ -265,7 +320,7 @@ func Test_FindN(t *testing.T) {
 
 func Test_Delete(t *testing.T) {
 	project := randStringBytes(10)
-	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", jstore.SyncUpdates)
+	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", SyncUpdates())
 	assert.NoError(t, err)
 
 	_, err = b.Marshal(ford, jstore.NewID(project, "person", "ford"))
@@ -290,7 +345,7 @@ func Test_Delete(t *testing.T) {
 
 func Test_CustomSearch(t *testing.T) {
 	project := randStringBytes(10)
-	esStore, err := NewElasticStore(esTestURL(), jstore.SyncUpdates)
+	esStore, err := NewElasticStore(esTestURL(), SyncUpdates())
 	require.NoError(t, err)
 	store := jstore.WrapStore(esStore)
 

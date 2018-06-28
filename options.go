@@ -36,5 +36,3 @@ func Id(value string) Option {
 type IdOption struct {
 	Value string
 }
-
-var SyncUpdates = "SyncUpdates"
