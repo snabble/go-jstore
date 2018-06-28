@@ -24,7 +24,7 @@ var (
 )
 
 func Test_BasicStoring(t *testing.T) {
-	store, err := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	store, err := jstore.NewStore("memory", "memory")
 	require.NoError(t, err)
 
 	id, err := store.Marshal(ford, jstore.NewID("project", "person", "ford"))
@@ -51,7 +51,7 @@ func Test_BasicStoring(t *testing.T) {
 }
 
 func Test_OptimisticLocking_Update(t *testing.T) {
-	store, _ := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	store, _ := jstore.NewStore("memory", "memory")
 
 	id, _ := store.Marshal(ford, jstore.NewID("project", "person", "ford"))
 
@@ -68,7 +68,7 @@ func Test_OptimisticLocking_Update(t *testing.T) {
 }
 
 func Test_OptimisticLocking_Delete(t *testing.T) {
-	store, _ := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	store, _ := jstore.NewStore("memory", "memory")
 
 	id, _ := store.Marshal(ford, jstore.NewID("project", "person", "ford"))
 	store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
@@ -79,7 +79,7 @@ func Test_OptimisticLocking_Delete(t *testing.T) {
 }
 
 func Test_FindInMissingProject(t *testing.T) {
-	store, _ := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	store, _ := jstore.NewStore("memory", "memory")
 
 	_, err := store.Find("project", "person", jstore.Id("ford"))
 
@@ -87,7 +87,7 @@ func Test_FindInMissingProject(t *testing.T) {
 }
 
 func Test_CompareOptions(t *testing.T) {
-	store, err := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	store, err := jstore.NewStore("memory", "memory")
 	require.NoError(t, err)
 
 	store.Marshal(ford, jstore.NewID("project", "person", "ford"))
@@ -171,7 +171,7 @@ func Test_CompareOptions(t *testing.T) {
 }
 
 func Test_FindN(t *testing.T) {
-	store, err := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	store, err := jstore.NewStore("memory", "memory")
 	require.NoError(t, err)
 
 	for i := 0; i < 50; i++ {
@@ -202,7 +202,7 @@ func Test_FindN(t *testing.T) {
 }
 
 func Test_Delete(t *testing.T) {
-	store, err := jstore.NewStore("memory", "memory", jstore.SyncUpdates)
+	store, err := jstore.NewStore("memory", "memory")
 	require.NoError(t, err)
 
 	store.Marshal(ford, jstore.NewID("project", "person", "ford"))
