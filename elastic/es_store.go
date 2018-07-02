@@ -57,7 +57,14 @@ type ElasticStore struct {
 }
 
 func NewElasticStore(baseURL string, options ...jstore.StoreOption) (*ElasticStore, error) {
-	client, err := elastic.NewClient(elastic.SetURL(baseURL))
+	clientOptions := []elastic.ClientOptionFunc{elastic.SetURL(baseURL)}
+	for _, option := range options {
+		if clientOption, ok := option.(elastic.ClientOptionFunc); ok {
+			clientOptions = append(clientOptions, clientOption)
+		}
+	}
+
+	client, err := elastic.NewClient(clientOptions...)
 	if err != nil {
 		return nil, err
 	}
