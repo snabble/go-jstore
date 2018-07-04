@@ -366,6 +366,43 @@ func Test_CustomSearch(t *testing.T) {
 	assert.Equal(t, int64(1), resp.Hits.TotalHits)
 }
 
+func Test_IndexTemplate(t *testing.T) {
+	template := fmt.Sprintf("template-%s", randStringBytes(10))
+
+	esStore, err := NewElasticStore(
+		esTestURL(),
+		IndexName(func(project, documentType string, matchAll bool) string {
+			return fmt.Sprintf("prefix-%s-%s", project, documentType)
+		}),
+		IndexTemplate(
+			template,
+			map[string]interface{}{
+				"index_patterns": []string{"prefix*"},
+				"mappings": map[string]interface{}{
+					"person": map[string]interface{}{
+						"properties": map[string]interface{}{
+							"name": map[string]string{
+								"type": "keyword",
+							},
+							"age": map[string]string{
+								"type": "long",
+							},
+							"birthDay": map[string]string{
+								"type": "date",
+							},
+						},
+					},
+				},
+			},
+		),
+	)
+	require.NoError(t, err)
+
+	exists, err := esStore.client.IndexTemplateExists(template).Do(context.Background())
+	require.NoError(t, err)
+	assert.True(t, exists)
+}
+
 const letterBytes = "abcdefghijklmnopqrstuvwxyz"
 
 func init() {

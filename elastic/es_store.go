@@ -22,24 +22,44 @@ var DriverName = "elastic"
 // https://www.elastic.co/guide/en/elasticsearch/reference/current/multi-index.html
 type IndexNamer func(project, documentType string, matchAll bool) string
 
-type ElasticStoreOption func(store *ElasticStore)
+type ElasticStoreOption func(store *ElasticStore) error
 
 // IndexName allows to insert a custom IndexNamer
 func IndexName(provider IndexNamer) ElasticStoreOption {
-	return func(store *ElasticStore) {
+	return func(store *ElasticStore) error {
 		store.indexName = provider
+		return nil
 	}
 }
 
 func DefaultIndexName() ElasticStoreOption {
-	return func(store *ElasticStore) {
+	return func(store *ElasticStore) error {
 		store.indexName = defaultIndexName
+		return nil
 	}
 }
 
 func SyncUpdates() ElasticStoreOption {
-	return func(store *ElasticStore) {
+	return func(store *ElasticStore) error {
 		store.syncUpdates = true
+		return nil
+	}
+}
+
+func IndexTemplate(name string, template interface{}) ElasticStoreOption {
+	return func(store *ElasticStore) error {
+		response, err := store.client.IndexPutTemplate(name).
+			BodyJson(template).
+			Do(store.cntx())
+
+		if err != nil {
+			return err
+		}
+
+		if !response.Acknowledged {
+			return errors.Errorf("creation of index template %s not acknowledged", name)
+		}
+		return nil
 	}
 }
 
@@ -77,7 +97,9 @@ func NewElasticStore(baseURL string, options ...jstore.StoreOption) (*ElasticSto
 
 	for _, option := range options {
 		if esOption, ok := option.(ElasticStoreOption); ok {
-			esOption(store)
+			if err := esOption(store); err != nil {
+				return nil, err
+			}
 		}
 	}
 
