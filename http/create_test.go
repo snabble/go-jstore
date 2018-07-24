@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
@@ -46,6 +47,50 @@ func Test_Create_Success(t *testing.T) {
 
 	assert.Equal(t, "project", requestArg.Project)
 	assert.Equal(t, "entity", requestArg.DocumentType)
+
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	require.NoError(t, err)
+	assert.Equal(t, body, string(bodyBytes))
+}
+
+func Test_Create_Success_Without_Body_Response(t *testing.T) {
+	store, _ := jstore.NewStore(memory.DriverName, "")
+	router := mux.NewRouter()
+	message := "hello world"
+
+	var requestArg Request
+	Expose(
+		router,
+		store,
+		allPermited,
+		allPermited,
+		allPermited,
+		allPermited,
+		nullQueryExtractor,
+		func(r Request) (string, interface{}, error) {
+			requestArg = r
+			return "id", TestEntity{Message: message}, nil
+		},
+		func() interface{} {
+			return TestEntity{}
+		},
+		nullWithLinks,
+		documentTypes,
+		map[string]string{},
+		PostDoNotRespondWithBody(),
+	)
+	body := `{"message":"hello world"}`
+
+	response := postRequest(router, "http://test/project/entity", body)
+
+	require.Equal(t, http.StatusCreated, response.Code)
+	assert.NotEmpty(t, response.Header().Get("Location"))
+
+	assert.Equal(t, "entity", requestArg.DocumentType)
+
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "", string(bodyBytes))
 }
 
 func Test_Create_ExtractionErrors(t *testing.T) {
