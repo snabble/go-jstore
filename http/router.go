@@ -28,6 +28,7 @@ func Expose(
 	withLinks WithLinks,
 	allowedDocumentTypes []string,
 	resourceNames map[string]string,
+	configOpts ...ConfigOption,
 ) *mux.Router {
 
 	register := func(name, path, method string, permit Permit, handler func(w Response, r Request)) {
@@ -45,7 +46,9 @@ func Expose(
 
 	urls := NewURLBuilder(router, resourceNames)
 
-	register("create", "/{project}/{resource}", http.MethodPost, canCreate, create(store, bodyExtractor, withLinks, urls))
+	cfg := configFromOptions(configOpts)
+
+	register("create", "/{project}/{resource}", http.MethodPost, canCreate, create(store, bodyExtractor, withLinks, urls, cfg))
 	register("read", "/{project}/{resource}/{id}", http.MethodGet, canRead, get(store, provider, withLinks, urls))
 	register("list", "/{project}/{resource}", http.MethodGet, canRead, list(store, provider, queryExtractor, withLinks, urls))
 	register("update", "/{project}/{resource}/{id}", http.MethodPut, canUpdate, update(store, bodyExtractor, withLinks, urls))

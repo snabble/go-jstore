@@ -6,7 +6,11 @@ import (
 	jstore "github.com/snabble/go-jstore"
 )
 
-func create(store jstore.JStore, extract BodyExtractor, withLinks WithLinks, urls *URLBuilder) func(w Response, r Request) {
+func create(store jstore.JStore,
+	extract BodyExtractor,
+	withLinks WithLinks,
+	urls *URLBuilder,
+	cfg config) func(w Response, r Request) {
 	return func(w Response, r Request) {
 		id, entity, err := extract(r)
 
@@ -23,7 +27,13 @@ func create(store jstore.JStore, extract BodyExtractor, withLinks WithLinks, url
 		}
 
 		selfLink := urls.Entity(r.Project, r.DocumentType, id)
+
 		w.AddHeader("Location", selfLink.String())
-		w.Send(http.StatusCreated, withLinks(entity, selfLinks(selfLink)))
+
+		if cfg.postRespondWithBody {
+			w.Send(http.StatusCreated, withLinks(entity, selfLinks(selfLink)))
+		} else {
+			w.Writer.WriteHeader(http.StatusCreated)
+		}
 	}
 }
