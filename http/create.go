@@ -10,7 +10,7 @@ func create(store jstore.JStore,
 	extract BodyExtractor,
 	withLinks WithLinks,
 	urls *URLBuilder,
-	cfg config) func(w Response, r Request) {
+	cfg Config) func(w Response, r Request) {
 	return func(w Response, r Request) {
 		id, entity, err := extract(r)
 
