@@ -12,5 +12,5 @@ Running the tests requires a running elasticsearch.
 
 ```
 sudo sysctl -w vm.max_map_count=262144
-docker run --rm -p 9200:9200 docker.elastic.co/elasticsearch/elasticsearch:6.3.0
+docker run --rm -p 9200:9200 docker.elastic.co/elasticsearch/elasticsearch:6.0.1
 ```

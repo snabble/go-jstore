@@ -1,18 +1,18 @@
 package http
 
-type ConfigOption func(cfg *Config)
+type ConfigOption func(cfg *config)
 
-type Config struct {
+type config struct {
 	postRespondWithBody bool
 }
 
-func defaultConfig() Config {
-	return Config{
+func defaultConfig() config {
+	return config{
 		postRespondWithBody: true,
 	}
 }
 
-func configFromOptions(configOpts []ConfigOption) Config {
+func configFromOptions(configOpts []ConfigOption) config {
 	cfg := defaultConfig()
 	for _, c := range configOpts {
 		c(&cfg)
@@ -20,8 +20,8 @@ func configFromOptions(configOpts []ConfigOption) Config {
 	return cfg
 }
 
-func PostDoNotRespondWithBody() func(cfg *Config) {
-	return func(cfg *Config) {
+func PostDoNotRespondWithBody() func(cfg *config) {
+	return func(cfg *config) {
 		cfg.postRespondWithBody = false
 	}
 }
