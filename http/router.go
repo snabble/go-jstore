@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	jstore "github.com/snabble/go-jstore"
+	logging "github.com/snabble/go-logging"
 )
 
 type Permit func(request Request) bool
@@ -135,6 +136,7 @@ func sendError(w http.ResponseWriter, err error, status int) bool {
 	} else {
 		fmt.Fprintln(w, err)
 	}
+	logging.Logger.Errorf("Error, Statuscode: %s, Message: %s", status, err)
 	return true
 }
 
