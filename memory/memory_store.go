@@ -191,7 +191,11 @@ func (store *MemoryStore) Save(id jstore.EntityID, json string) (jstore.EntityID
 		return present.entity.EntityID, jstore.OptimisticLockingError
 	}
 
-	entity := jstore.Entity{jstore.NewIDWithVersion(id.Project, id.DocumentType, id.ID, present.entity.Version+1), nil, json}
+	entity := jstore.Entity{
+		EntityID:  jstore.NewIDWithVersion(id.Project, id.DocumentType, id.ID, present.entity.Version+1),
+		ObjectRef: nil,
+		JSON:      json,
+	}
 	item, err := newItem(entity)
 	if err != nil {
 		return jstore.EntityID{}, err

@@ -240,9 +240,9 @@ func (store *ElasticStore) cntx() context.Context {
 
 func toEntity(project, documentType string, hit *elastic.SearchHit) jstore.Entity {
 	return jstore.Entity{
-		toEntityID(project, documentType, hit),
-		nil,
-		string(*hit.Source),
+		EntityID:  toEntityID(project, documentType, hit),
+		ObjectRef: nil,
+		JSON:      string(*hit.Source),
 	}
 }
 
