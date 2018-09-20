@@ -2,10 +2,13 @@
 language: go
 
 go:
- - 1.9.x
+ - 1.11.x
 
 services:
- - elasticsearch
+  - docker
+
+before_script:
+  - "./start_es.sh"
 
 script:
  - go get -t -v ./...
