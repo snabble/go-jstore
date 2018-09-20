@@ -140,7 +140,7 @@ func (store *ElasticStore) Delete(id jstore.EntityID) error {
 		if e, ok := err.(*elastic.Error); ok && e.Details != nil && e.Details.Type == "version_conflict_engine_exception" {
 			return jstore.OptimisticLockingError
 		}
-		return errors.Wrapf(err, "deleting entity %s", id)
+		return errors.Wrapf(err, "deleting entity %v", id)
 	}
 
 	return err
@@ -240,9 +240,9 @@ func (store *ElasticStore) cntx() context.Context {
 
 func toEntity(project, documentType string, hit *elastic.SearchHit) jstore.Entity {
 	return jstore.Entity{
-		toEntityID(project, documentType, hit),
-		nil,
-		string(*hit.Source),
+		EntityID:  toEntityID(project, documentType, hit),
+		ObjectRef: nil,
+		JSON:      string(*hit.Source),
 	}
 }
 
@@ -264,11 +264,7 @@ func (store *ElasticStore) createSearch(project, documentType string, options ..
 		case jstore.CompareOption:
 			switch o.Operation {
 			case "=":
-				if _, isString := o.Value.(string); isString {
-					boolQuery.Must(elastic.NewTermQuery(o.Property+".keyword", o.Value))
-				} else {
-					boolQuery.Must(elastic.NewTermQuery(o.Property, o.Value))
-				}
+				boolQuery.Must(elastic.NewTermQuery(o.Property, o.Value))
 			case "<":
 				boolQuery.Must(elastic.NewRangeQuery(o.Property).Lt(o.Value))
 			case "<=":

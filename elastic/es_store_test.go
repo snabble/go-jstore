@@ -42,6 +42,25 @@ var (
 	marvin      = Person{"Marvin", 1010, day("2042-01-01")}
 	zaphod      = Person{"Zaphod Beeblebrox", 4200, day("1900-01-01")}
 	heartOfGold = Spaceship{"Heart Of Gold", 99999999}
+
+	personMapping = map[string]interface{}{
+		"index_patterns": []string{"*person*"},
+		"mappings": map[string]interface{}{
+			"person": map[string]interface{}{
+				"properties": map[string]interface{}{
+					"name": map[string]string{
+						"type": "keyword",
+					},
+					"age": map[string]string{
+						"type": "long",
+					},
+					"birthDay": map[string]string{
+						"type": "date",
+					},
+				},
+			},
+		},
+	}
 )
 
 func Test_Health_OK(t *testing.T) {
@@ -199,7 +218,15 @@ func Test_FindInMissingProject(t *testing.T) {
 
 func Test_CompareOptions(t *testing.T) {
 	project := randStringBytes(10)
-	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", SyncUpdates())
+	b, err := jstore.NewBucket(
+		"elastic",
+		esTestURL(),
+		project,
+		"person",
+		SyncUpdates(),
+		IndexTemplate("template-person-test", personMapping),
+	)
+
 	assert.NoError(t, err)
 
 	_, err = b.Marshal(ford, jstore.NewID(project, "persons", "ford"))
@@ -345,7 +372,11 @@ func Test_Delete(t *testing.T) {
 
 func Test_CustomSearch(t *testing.T) {
 	project := randStringBytes(10)
-	esStore, err := NewElasticStore(esTestURL(), SyncUpdates())
+	esStore, err := NewElasticStore(
+		esTestURL(),
+		SyncUpdates(),
+		IndexTemplate("template-person-test", personMapping),
+	)
 	require.NoError(t, err)
 	store := jstore.WrapStore(esStore)
 
@@ -358,7 +389,7 @@ func Test_CustomSearch(t *testing.T) {
 	require.NotNil(t, search)
 
 	query := elastic.NewBoolQuery()
-	query.Must(elastic.NewTermQuery("name.keyword", "Marvin"))
+	query.Must(elastic.NewTermQuery("name", "Marvin"))
 	search.Query(query)
 
 	resp, err := search.Do(context.Background())
