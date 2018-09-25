@@ -2,6 +2,7 @@ package elastic
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -288,4 +289,19 @@ func (store *ElasticStore) createSearch(project, documentType string, options ..
 
 func defaultIndexName(project, documentType string, _ bool) string {
 	return strings.ToLower(project + "-" + documentType)
+}
+
+func DailyIndexNamer(project, documentType string, matchAll bool) string {
+	return dailyIndexNamer(time.Now)(project, documentType, matchAll)
+}
+
+func dailyIndexNamer(timeSourceFunc func() time.Time) IndexNamer {
+	return func(project, documentType string, matchAll bool) string {
+		prefix := fmt.Sprintf("%s-%s-", project, strings.ToLower(documentType))
+		suffix := "*"
+		if !matchAll {
+			suffix = timeSourceFunc().UTC().Format("2006.01.02")
+		}
+		return prefix + suffix
+	}
 }
