@@ -125,7 +125,13 @@ func Test_BasicStoring(t *testing.T) {
 }
 
 func Test_TimeBasedIndex(t *testing.T) {
-	now := "2018.06.01"
+	var now string
+	timeFunc := func() time.Time {
+		date, err := time.Parse("2006.01.02", now)
+		require.NoError(t, err)
+		return date
+	}
+
 	project := randStringBytes(10)
 	personBucket, err := jstore.NewBucket(
 		"elastic",
@@ -133,17 +139,11 @@ func Test_TimeBasedIndex(t *testing.T) {
 		project,
 		"person",
 		SyncUpdates(),
-		IndexName(func(project, documentType string, matchAll bool) string {
-			prefix := fmt.Sprintf("test-%s-%s-", project, documentType)
-			suffix := now
-			if matchAll {
-				suffix = "*"
-			}
-			return prefix + suffix
-		}),
+		IndexName(dailyIndexNamer(timeFunc)),
 	)
 	assert.NoError(t, err)
 
+	now = "2018.06.01"
 	_, err = personBucket.Marshal(ford, jstore.NewID(project, "persons", "ford"))
 	assert.NoError(t, err)
 	now = "2018.06.02"
@@ -172,10 +172,14 @@ func Test_TimeBasedIndex(t *testing.T) {
 
 	// delete
 	err = personBucket.Delete(jstore.NewID(project, "persons", "foo"))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	err = personBucket.Unmarshal(&result, jstore.Id("foo"))
-	require.Error(t, err)
+	assert.Error(t, err)
+
+	//cannot delete yesterdays data
+	err = personBucket.Delete(jstore.NewID(project, "persons", "ford"))
+	assert.Error(t, err)
 }
 
 func Test_OptimisticLocking_Update(t *testing.T) {
