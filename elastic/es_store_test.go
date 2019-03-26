@@ -41,6 +41,7 @@ var (
 	ford        = Person{"Ford Prefect", 42, day("1980-01-01")}
 	marvin      = Person{"Marvin", 1010, day("2042-01-01")}
 	zaphod      = Person{"Zaphod Beeblebrox", 4200, day("1900-01-01")}
+	jeltz       = Person{"Prostetnic Vogon Jeltz", 1200, day("1952-01-01")}
 	heartOfGold = Spaceship{"Heart Of Gold", 99999999}
 
 	personMapping = map[string]interface{}{
@@ -374,7 +375,7 @@ func Test_Delete(t *testing.T) {
 	assert.NoError(t, b.Unmarshal(&result, jstore.Id("zaphod")))
 }
 
-func Test_CustomSearch(t *testing.T) {
+func Test_SearchIn(t *testing.T) {
 	project := randStringBytes(10)
 	esStore, err := NewElasticStore(
 		esTestURL(),
@@ -399,6 +400,38 @@ func Test_CustomSearch(t *testing.T) {
 	resp, err := search.Do(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), resp.Hits.TotalHits)
+}
+
+func Test_SearchInCurrentIndex(t *testing.T) {
+	yesterdaysIndexName := "persons-2019.03.25"
+	todaysIndexName := "persons-2019.03.26"
+	indexName := yesterdaysIndexName
+	project := randStringBytes(10)
+	esStore, err := NewElasticStore(
+		esTestURL(),
+		SyncUpdates(),
+		IndexTemplate("template-person-test", personMapping),
+		IndexName(func(project, documentType string, matchAll bool) string { return indexName }),
+	)
+	require.NoError(t, err)
+	store := jstore.WrapStore(esStore)
+
+	_, err = store.Marshal(jeltz, jstore.NewID(project, "person", "jeltz"))
+	assert.NoError(t, err)
+
+	indexName = todaysIndexName
+
+	_, err = store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	assert.NoError(t, err)
+	_, err = store.Marshal(marvin, jstore.NewID(project, "person", "marvin"))
+	assert.NoError(t, err)
+
+	search := esStore.SearchInCurrentIndex(project, "person")
+	require.NotNil(t, search)
+
+	resp, err := search.Do(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), resp.Hits.TotalHits)
 }
 
 func Test_IndexTemplate(t *testing.T) {
