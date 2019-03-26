@@ -235,6 +235,12 @@ func (store *ElasticStore) SearchIn(project, documentType string) *elastic.Searc
 		Type(documentType)
 }
 
+func (store *ElasticStore) SearchInCurrentIndex(project, documentType string) *elastic.SearchService {
+	return store.client.
+		Search(store.indexName(project, documentType, false)).
+		Type(documentType)
+}
+
 func (store *ElasticStore) cntx() context.Context {
 	return context.Background()
 }
