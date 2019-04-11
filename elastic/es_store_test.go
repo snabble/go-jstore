@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/olivere/elastic"
+	elastic "gopkg.in/olivere/elastic.v6"
 
 	"github.com/snabble/go-jstore"
 	"github.com/stretchr/testify/assert"
