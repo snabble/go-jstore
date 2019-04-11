@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic"
 	"github.com/pkg/errors"
 	"github.com/snabble/go-jstore"
+	elastic "gopkg.in/olivere/elastic.v6"
 )
 
 var DriverName = "elastic"
