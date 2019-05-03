@@ -2,16 +2,17 @@
 language: go
 
 go:
- - 1.11.x
+ - 1.12.x
 
 services:
   - docker
+
+env:
+- GO111MODULE=on
 
 before_script:
   - "./start_es.sh"
 
 script:
- - go get -t -v ./...
- - go generate ./...
  - go test -cover ./...
  - go vet ./...
