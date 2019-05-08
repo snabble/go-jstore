@@ -47,6 +47,13 @@ func SyncUpdates() ElasticStoreOption {
 	}
 }
 
+func HealthTimeout(timeout time.Duration) ElasticStoreOption {
+	return func(store *ElasticStore) error {
+		store.healthTimeout = timeout
+		return nil
+	}
+}
+
 func IndexTemplate(name string, template interface{}) ElasticStoreOption {
 	return func(store *ElasticStore) error {
 		response, err := store.client.IndexPutTemplate(name).
@@ -72,9 +79,10 @@ func init() {
 }
 
 type ElasticStore struct {
-	client      *elastic.Client
-	syncUpdates bool
-	indexName   IndexNamer
+	client        *elastic.Client
+	syncUpdates   bool
+	healthTimeout time.Duration
+	indexName     IndexNamer
 }
 
 func NewElasticStore(baseURL string, options ...jstore.StoreOption) (*ElasticStore, error) {
@@ -91,9 +99,10 @@ func NewElasticStore(baseURL string, options ...jstore.StoreOption) (*ElasticSto
 	}
 
 	store := &ElasticStore{
-		client:      client,
-		syncUpdates: false,
-		indexName:   defaultIndexName,
+		client:        client,
+		syncUpdates:   false,
+		healthTimeout: time.Second,
+		indexName:     defaultIndexName,
 	}
 
 	for _, option := range options {
@@ -108,7 +117,7 @@ func NewElasticStore(baseURL string, options ...jstore.StoreOption) (*ElasticSto
 }
 
 func (store *ElasticStore) HealthCheck() error {
-	cntx, cancelFunc := context.WithTimeout(store.cntx(), time.Second)
+	cntx, cancelFunc := context.WithTimeout(store.cntx(), store.healthTimeout)
 	defer cancelFunc()
 	resp, err := store.client.ClusterHealth().
 		Do(cntx)
