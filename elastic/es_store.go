@@ -272,6 +272,7 @@ func toEntityID(project, documentType string, hit *elastic.SearchHit) jstore.Ent
 }
 
 func (store *ElasticStore) createSearch(project, documentType string, options ...jstore.Option) (*elastic.SearchService, error) {
+	search := store.SearchIn(project, documentType).Version(true)
 	boolQuery := elastic.NewBoolQuery()
 	for _, o := range options {
 		switch o := o.(type) {
@@ -292,14 +293,14 @@ func (store *ElasticStore) createSearch(project, documentType string, options ..
 			default:
 				return nil, errors.New("unsupported compare option: " + o.Operation)
 			}
+		case jstore.SortOption:
+			search = search.Sort(o.Property, o.Ascending)
 		default:
 			return nil, errors.Errorf("unsupported option: %v", o)
 		}
 	}
 
-	return store.SearchIn(project, documentType).
-		Version(true).
-		Query(boolQuery), nil
+	return search.Query(boolQuery), nil
 }
 
 func defaultIndexName(project, documentType string, _ bool) string {

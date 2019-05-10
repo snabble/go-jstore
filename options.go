@@ -36,3 +36,15 @@ func Id(value string) Option {
 type IdOption struct {
 	Value string
 }
+
+func SortBy(property string, ascending bool) Option {
+	return SortOption{
+		property,
+		ascending,
+	}
+}
+
+type SortOption struct {
+	Property  string
+	Ascending bool
+}

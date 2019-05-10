@@ -349,6 +349,49 @@ func Test_FindN(t *testing.T) {
 	assert.Equal(t, 50, len(docs))
 }
 
+func Test_FindN_SortBy(t *testing.T) {
+	project := randStringBytes(10)
+	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", SyncUpdates())
+	assert.NoError(t, err)
+
+	for i := 0; i < 50; i++ {
+		p := Person{
+			Name: "person-" + strconv.Itoa(i),
+			Age:  i,
+		}
+		_, err := b.Marshal(p, jstore.NewID(project, "person", strconv.Itoa(i)))
+		assert.NoError(t, err)
+	}
+
+	// ascending
+	docs, err := b.FindN(1000, jstore.SortBy("age", true))
+	assert.NoError(t, err)
+	assert.Equal(t, 50, len(docs))
+	age := -1
+	for _, d := range docs {
+		p := Person{}
+		err = json.Unmarshal([]byte(d.JSON), &p)
+		assert.NoError(t, err)
+		assert.Contains(t, p.Name, "person-")
+		assert.True(t, age < p.Age)
+		age = p.Age
+	}
+
+	// descending
+	docs, err = b.FindN(1000, jstore.SortBy("age", false))
+	assert.NoError(t, err)
+	assert.Equal(t, 50, len(docs))
+	age = 999999
+	for _, d := range docs {
+		p := Person{}
+		err = json.Unmarshal([]byte(d.JSON), &p)
+		assert.NoError(t, err)
+		assert.Contains(t, p.Name, "person-")
+		assert.True(t, age > p.Age)
+		age = p.Age
+	}
+}
+
 func Test_Delete(t *testing.T) {
 	project := randStringBytes(10)
 	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", SyncUpdates())
