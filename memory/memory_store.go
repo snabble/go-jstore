@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -36,6 +38,8 @@ func (item *storageItem) matches(options ...jstore.Option) (bool, error) {
 	result := true
 	for _, option := range options {
 		switch option := option.(type) {
+		case jstore.SortOption:
+			continue
 		case jstore.IdOption:
 			result = result && (item.entity.ID == option.Value)
 		case jstore.CompareOption:
@@ -234,22 +238,89 @@ func (store *MemoryStore) FindN(project, documentType string, maxCount int, opti
 
 	list := store.storage[project][documentType]
 
-	result := []jstore.Entity{}
+	items := []storageItem{}
 	for _, item := range list {
 		matches, err := item.matches(options...)
 		if err != nil {
 			return []jstore.Entity{}, err
 		}
 		if matches {
-			result = append(result, item.entity)
-		}
-
-		if len(result) == maxCount {
-			break
+			items = append(items, item)
 		}
 	}
 
+	if len(items) == 0 {
+		return []jstore.Entity{}, nil
+	}
+
+	for _, o := range options {
+		switch o.(type) {
+		case jstore.SortOption:
+			var err error
+			items, err = store.sort(items, o.(jstore.SortOption))
+			if err != nil {
+				return []jstore.Entity{}, err
+			}
+		default:
+		}
+	}
+
+	if len(items) > maxCount {
+		items = items[:maxCount]
+	}
+
+	result := make([]jstore.Entity, 0, len(items))
+	for _, item := range items {
+		result = append(result, item.entity)
+	}
+
 	return result, nil
+}
+
+func (store *MemoryStore) sort(items []storageItem, option jstore.SortOption) ([]storageItem, error) {
+	switch t := items[0].object[option.Property].(type) {
+	case string:
+		sort.Slice(items, func(i, j int) bool {
+			return option.Ascending == (items[i].object[option.Property].(string) <= items[j].object[option.Property].(string))
+		})
+	case int:
+		items = intSort(items, option.Property, option.Ascending)
+	case int8:
+		items = intSort(items, option.Property, option.Ascending)
+	case int16:
+		items = intSort(items, option.Property, option.Ascending)
+	case int32:
+		items = intSort(items, option.Property, option.Ascending)
+	case int64:
+		items = intSort(items, option.Property, option.Ascending)
+	case float32:
+		items = floatSort(items, option.Property, option.Ascending)
+	case float64:
+		items = floatSort(items, option.Property, option.Ascending)
+	case time.Time:
+		sort.Slice(items, func(i, j int) bool {
+			return option.Ascending ==
+				(items[i].object[option.Property].(time.Time).
+					Before(items[j].object[option.Property].(time.Time)))
+		})
+	default:
+		return []storageItem{}, fmt.Errorf("unsupported sort option on %s with type %T", option.Property, t)
+	}
+	return items, nil
+}
+
+func floatSort(items []storageItem, property string, ascending bool) []storageItem {
+	sort.Slice(items, func(i, j int) bool {
+		return ascending == (items[i].object[property].(float64) <= items[j].object[property].(float64))
+	})
+	return items
+}
+
+func intSort(items []storageItem, property string, ascending bool) []storageItem {
+	sort.Slice(items, func(i, j int) bool {
+		return ascending == (items[i].object[property].(int64) <= items[j].object[property].(int64))
+	})
+	return items
 }
 
 func (store *MemoryStore) HealthCheck() error {

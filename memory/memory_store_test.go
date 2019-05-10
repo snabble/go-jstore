@@ -201,6 +201,49 @@ func Test_FindN(t *testing.T) {
 	assert.Equal(t, 50, len(docs))
 }
 
+func Test_FindN_SortBy(t *testing.T) {
+	store, err := jstore.NewStore("memory", "memory")
+	require.NoError(t, err)
+
+	for i := 0; i < 50; i++ {
+		p := Person{
+			Name: "person-" + strconv.Itoa(i),
+			Age:  i,
+		}
+		_, err := store.Marshal(p, jstore.NewID("project", "person", strconv.Itoa(i)))
+		require.NoError(t, err)
+	}
+
+	// ascending
+	docs, err := store.FindN("project", "person", 20, jstore.SortBy("age", true))
+	require.NoError(t, err)
+	assert.Equal(t, 20, len(docs))
+
+	age := -1
+	for _, d := range docs {
+		p := Person{}
+		err = json.Unmarshal([]byte(d.JSON), &p)
+		require.NoError(t, err)
+		assert.True(t, age <= p.Age)
+		age = p.Age
+	}
+
+	// descending
+	docs, err = store.FindN("project", "person", 20, jstore.SortBy("age", false))
+	require.NoError(t, err)
+	assert.Equal(t, 20, len(docs))
+
+	age = 9999999
+	for _, d := range docs {
+		p := Person{}
+		err = json.Unmarshal([]byte(d.JSON), &p)
+		require.NoError(t, err)
+		assert.True(t, age >= p.Age)
+		age = p.Age
+	}
+
+}
+
 func Test_Delete(t *testing.T) {
 	store, err := jstore.NewStore("memory", "memory")
 	require.NoError(t, err)
