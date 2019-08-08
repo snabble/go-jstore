@@ -16,9 +16,16 @@ type BodyExtractor func(r Request) (string, interface{}, error)
 type EntityProvider func() interface{}
 type WithLinks func(entity interface{}, links Links) interface{}
 
+type Store interface {
+	Marshal(object interface{}, id jstore.EntityID) (jstore.EntityID, error)
+	Unmarshal(entityOrObjectRef interface{}, project, documentType string, options ...jstore.Option) error
+	Delete(id jstore.EntityID) error
+	FindN(project, documentType string, maxResults int, options ...jstore.Option) ([]jstore.Entity, error)
+}
+
 func Expose(
 	router *mux.Router,
-	store jstore.JStore,
+	store Store,
 	canCreate Permit,
 	canRead Permit,
 	canUpdate Permit,

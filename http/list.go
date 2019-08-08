@@ -10,7 +10,7 @@ import (
 const ListMaxResults = 1000
 
 func list(
-	store jstore.JStore,
+	store Store,
 	provider EntityProvider,
 	extractor QueryExtractor,
 	withLinks WithLinks,

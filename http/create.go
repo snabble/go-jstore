@@ -6,7 +6,7 @@ import (
 	jstore "github.com/snabble/go-jstore"
 )
 
-func create(store jstore.JStore,
+func create(store Store,
 	extract BodyExtractor,
 	withLinks WithLinks,
 	urls *URLBuilder,
