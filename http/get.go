@@ -6,7 +6,7 @@ import (
 	jstore "github.com/snabble/go-jstore"
 )
 
-func get(store jstore.JStore, provider EntityProvider, withLinks WithLinks, urls *URLBuilder) func(w Response, r Request) {
+func get(store Store, provider EntityProvider, withLinks WithLinks, urls *URLBuilder) func(w Response, r Request) {
 	return func(w Response, r Request) {
 		var entity interface{}
 		entity = provider()

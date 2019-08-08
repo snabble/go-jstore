@@ -2,11 +2,9 @@ package http
 
 import (
 	"net/http"
-
-	jstore "github.com/snabble/go-jstore"
 )
 
-func update(store jstore.JStore, extract BodyExtractor, withLinks WithLinks, urls *URLBuilder) func(w Response, r Request) {
+func update(store Store, extract BodyExtractor, withLinks WithLinks, urls *URLBuilder) func(w Response, r Request) {
 	return func(w Response, r Request) {
 		id, entity, err := extract(r)
 
