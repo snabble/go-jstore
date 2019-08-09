@@ -18,7 +18,7 @@ func update(store Store, extract BodyExtractor, withLinks WithLinks, urls *URLBu
 			return
 		}
 
-		_, err = store.Marshal(&entity, r.EntityID())
+		_, err = store.Marshal(entity, r.EntityID())
 
 		if err != nil {
 			w.SendError(err)
