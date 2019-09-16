@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	"github.com/snabble/go-jstore"
 )
@@ -133,7 +133,6 @@ func (store *ElasticStore) HealthCheck() error {
 func (store *ElasticStore) Delete(id jstore.EntityID) error {
 	query := store.client.Delete().
 		Index(store.indexName(id.Project, id.DocumentType, false)).
-		Type(id.DocumentType).
 		Id(id.ID)
 
 	if id.Version != jstore.NoVersion {
@@ -159,7 +158,6 @@ func (store *ElasticStore) Delete(id jstore.EntityID) error {
 func (store *ElasticStore) Save(id jstore.EntityID, json string) (jstore.EntityID, error) {
 	query := store.client.Index().
 		Index(store.indexName(id.Project, id.DocumentType, false)).
-		Type(id.DocumentType).
 		Id(id.ID).
 		BodyString(json)
 
@@ -240,14 +238,12 @@ func (store *ElasticStore) FindN(project, documentType string, maxCount int, opt
 
 func (store *ElasticStore) SearchIn(project, documentType string) *elastic.SearchService {
 	return store.client.
-		Search(store.indexName(project, documentType, true)).
-		Type(documentType)
+		Search(store.indexName(project, documentType, true))
 }
 
 func (store *ElasticStore) SearchInCurrentIndex(project, documentType string) *elastic.SearchService {
 	return store.client.
-		Search(store.indexName(project, documentType, false)).
-		Type(documentType)
+		Search(store.indexName(project, documentType, false))
 }
 
 func (store *ElasticStore) cntx() context.Context {
@@ -258,7 +254,7 @@ func toEntity(project, documentType string, hit *elastic.SearchHit) jstore.Entit
 	return jstore.Entity{
 		EntityID:  toEntityID(project, documentType, hit),
 		ObjectRef: nil,
-		JSON:      string(*hit.Source),
+		JSON:      string(hit.Source),
 	}
 }
 

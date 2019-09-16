@@ -3,14 +3,11 @@ module github.com/snabble/go-jstore
 go 1.12
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/golang/mock v1.3.0 // indirect
-	github.com/google/go-cmp v0.3.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.1
-	github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983 // indirect
 	github.com/olivere/elastic v6.2.17+incompatible
+	github.com/olivere/elastic/v7 v7.0.6
 	github.com/pkg/errors v0.8.1
 	github.com/snabble/go-logging v0.0.1
 	github.com/stretchr/testify v1.3.0
