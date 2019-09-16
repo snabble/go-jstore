@@ -6,7 +6,6 @@ require (
 	github.com/golang/mock v1.3.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.1
-	github.com/olivere/elastic v6.2.17+incompatible
 	github.com/olivere/elastic/v7 v7.0.6
 	github.com/pkg/errors v0.8.1
 	github.com/snabble/go-logging v0.0.1

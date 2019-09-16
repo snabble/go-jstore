@@ -136,9 +136,13 @@ func (store *ElasticStore) Delete(id jstore.EntityID) error {
 		Id(id.ID)
 
 	if id.Version != jstore.NoVersion {
-		query.Version(id.Version)
+		version, err := checkVersion(id.Version)
+		if err != nil {
+			return err
+		}
+		query.IfSeqNo(version.SeqNo)
+		query.IfPrimaryTerm(version.PrimaryTerm)
 	}
-
 	if store.syncUpdates {
 		query = query.Refresh("true")
 	}
@@ -162,7 +166,12 @@ func (store *ElasticStore) Save(id jstore.EntityID, json string) (jstore.EntityI
 		BodyString(json)
 
 	if id.Version != jstore.NoVersion {
-		query.Version(id.Version)
+		version, err := checkVersion(id.Version)
+		if err != nil {
+			return jstore.EntityID{}, err
+		}
+		query.IfSeqNo(version.SeqNo)
+		query.IfPrimaryTerm(version.PrimaryTerm)
 	}
 
 	if store.syncUpdates {
@@ -182,7 +191,7 @@ func (store *ElasticStore) Save(id jstore.EntityID, json string) (jstore.EntityI
 		Project:      id.Project,
 		DocumentType: id.DocumentType,
 		ID:           resp.Id,
-		Version:      resp.Version,
+		Version:      Version{SeqNo: resp.SeqNo, PrimaryTerm: resp.PrimaryTerm},
 	}, nil
 }
 
@@ -258,17 +267,37 @@ func toEntity(project, documentType string, hit *elastic.SearchHit) jstore.Entit
 	}
 }
 
+type Version struct {
+	SeqNo       int64
+	PrimaryTerm int64
+}
+
+func checkVersion(version jstore.Version) (Version, error) {
+	v, ok := version.(Version)
+	if ok {
+		return v, nil
+	}
+	return Version{}, errors.Errorf("cannot cast interface version: '%v'", version)
+}
+
 func toEntityID(project, documentType string, hit *elastic.SearchHit) jstore.EntityID {
+	version := Version{}
+	if hit.SeqNo != nil {
+		version.SeqNo = *hit.SeqNo
+	}
+	if hit.PrimaryTerm != nil {
+		version.PrimaryTerm = *hit.PrimaryTerm
+	}
 	return jstore.EntityID{
 		Project:      project,
 		DocumentType: documentType,
 		ID:           hit.Id,
-		Version:      *hit.Version,
+		Version:      version,
 	}
 }
 
 func (store *ElasticStore) createSearch(project, documentType string, options ...jstore.Option) (*elastic.SearchService, error) {
-	search := store.SearchIn(project, documentType).Version(true)
+	search := store.SearchIn(project, documentType).SeqNoPrimaryTerm(true)
 	boolQuery := elastic.NewBoolQuery()
 	for _, o := range options {
 		switch o := o.(type) {

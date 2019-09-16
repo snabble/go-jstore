@@ -205,13 +205,15 @@ func Test_OptimisticLocking_Update(t *testing.T) {
 		elastic.SetSniff(false),
 	)
 
-	id, _ := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	id, err := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
 
-	assert.Equal(t, int64(1), id.Version)
+	require.NoError(t, err)
+	assert.NotNil(t, id.Version)
 
 	updatedID, err := store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
 	require.NoError(t, err)
-	assert.Equal(t, int64(2), updatedID.Version)
+	assert.NotNil(t, updatedID.Version)
+	assert.NotEqual(t, id.Version, updatedID.Version)
 
 	_, err = store.Marshal(Person{"Ford Prefect", 41, day("1980-01-01")}, id)
 
@@ -227,10 +229,11 @@ func Test_OptimisticLocking_Delete(t *testing.T) {
 		elastic.SetSniff(false),
 	)
 
-	id, _ := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	id, err := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	require.NoError(t, err)
 	store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
 
-	err := store.Delete(id)
+	err = store.Delete(id)
 
 	assert.Equal(t, jstore.OptimisticLockingError, err)
 }

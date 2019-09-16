@@ -158,6 +158,8 @@ func NewMemoryStore(baseURL string, options ...jstore.StoreOption) (jstore.Store
 	return &MemoryStore{storage: map[string]map[string]map[string]storageItem{}}, nil
 }
 
+type Version int
+
 func (store *MemoryStore) Delete(id jstore.EntityID) error {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
@@ -170,7 +172,7 @@ func (store *MemoryStore) Delete(id jstore.EntityID) error {
 	}
 
 	item, ok := store.storage[id.Project][id.DocumentType][id.ID]
-	if ok && (item.entity.Version != id.Version && id.Version != jstore.NoVersion) {
+	if ok && (item.entity.Version != id.Version && id.Version != nil) {
 		return jstore.OptimisticLockingError
 	}
 
@@ -194,9 +196,15 @@ func (store *MemoryStore) Save(id jstore.EntityID, json string) (jstore.EntityID
 	if ok && (present.entity.Version != id.Version && id.Version != jstore.NoVersion) {
 		return present.entity.EntityID, jstore.OptimisticLockingError
 	}
+	prevVersion, _ := id.Version.(Version)
 
 	entity := jstore.Entity{
-		EntityID:  jstore.NewIDWithVersion(id.Project, id.DocumentType, id.ID, present.entity.Version+1),
+		EntityID: jstore.NewIDWithVersion(
+			id.Project,
+			id.DocumentType,
+			id.ID,
+			prevVersion+1,
+		),
 		ObjectRef: nil,
 		JSON:      json,
 	}
