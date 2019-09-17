@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	"github.com/snabble/go-jstore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,17 +46,15 @@ var (
 	personMapping = map[string]interface{}{
 		"index_patterns": []string{"*person*"},
 		"mappings": map[string]interface{}{
-			"person": map[string]interface{}{
-				"properties": map[string]interface{}{
-					"name": map[string]string{
-						"type": "keyword",
-					},
-					"age": map[string]string{
-						"type": "long",
-					},
-					"birthDay": map[string]string{
-						"type": "date",
-					},
+			"properties": map[string]interface{}{
+				"name": map[string]string{
+					"type": "keyword",
+				},
+				"age": map[string]string{
+					"type": "long",
+				},
+				"birthDay": map[string]string{
+					"type": "date",
 				},
 			},
 		},
@@ -64,7 +62,10 @@ var (
 )
 
 func Test_Health_OK(t *testing.T) {
-	validStore, err := NewElasticStore(esTestURL())
+	validStore, err := NewElasticStore(
+		esTestURL(),
+		elastic.SetSniff(false),
+	)
 	assert.NoError(t, err)
 	assert.NoError(t, validStore.HealthCheck())
 }
@@ -91,8 +92,14 @@ func Test_Health_Error(t *testing.T) {
 
 func Test_BasicStoring(t *testing.T) {
 	project := randStringBytes(10)
-	personBucket, err := jstore.NewBucket("elastic", esTestURL(),
-		project, "person", SyncUpdates())
+	personBucket, err := jstore.NewBucket(
+		"elastic",
+		esTestURL(),
+		project,
+		"person",
+		SyncUpdates(),
+		elastic.SetSniff(false),
+	)
 	assert.NoError(t, err)
 
 	_, err = personBucket.Marshal(ford, jstore.NewID(project, "persons", "ford"))
@@ -102,8 +109,14 @@ func Test_BasicStoring(t *testing.T) {
 	_, err = personBucket.Marshal(zaphod, jstore.NewID(project, "persons", "foo"))
 	assert.NoError(t, err)
 
-	spaceshipBucket, err := jstore.NewBucket("elastic", esTestURL(),
-		project, "spaceship", SyncUpdates())
+	spaceshipBucket, err := jstore.NewBucket(
+		"elastic",
+		esTestURL(),
+		project,
+		"spaceship",
+		SyncUpdates(),
+		elastic.SetSniff(false),
+	)
 	assert.NoError(t, err)
 
 	_, err = spaceshipBucket.Marshal(heartOfGold, jstore.NewID(project, "persons", "heartOfGold"))
@@ -140,6 +153,7 @@ func Test_TimeBasedIndex(t *testing.T) {
 		"person",
 		SyncUpdates(),
 		IndexName(dailyIndexNamer(timeFunc)),
+		elastic.SetSniff(false),
 	)
 	assert.NoError(t, err)
 
@@ -184,35 +198,55 @@ func Test_TimeBasedIndex(t *testing.T) {
 
 func Test_OptimisticLocking_Update(t *testing.T) {
 	project := randStringBytes(10)
-	store, _ := jstore.NewStore("elastic", esTestURL(), SyncUpdates())
+	store, _ := jstore.NewStore(
+		"elastic",
+		esTestURL(),
+		SyncUpdates(),
+		elastic.SetSniff(false),
+	)
 
-	id, _ := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	id, err := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
 
-	assert.Equal(t, int64(1), id.Version)
+	require.NoError(t, err)
+	assert.NotNil(t, id.Version)
 
-	updatedID, _ := store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
+	updatedID, err := store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
+	require.NoError(t, err)
+	assert.NotNil(t, updatedID.Version)
+	assert.NotEqual(t, id.Version, updatedID.Version)
 
-	assert.Equal(t, int64(2), updatedID.Version)
-
-	_, err := store.Marshal(Person{"Ford Prefect", 41, day("1980-01-01")}, id)
+	_, err = store.Marshal(Person{"Ford Prefect", 41, day("1980-01-01")}, id)
 
 	assert.Equal(t, jstore.OptimisticLockingError, err)
 }
 
 func Test_OptimisticLocking_Delete(t *testing.T) {
 	project := randStringBytes(10)
-	store, _ := jstore.NewStore("elastic", esTestURL(), SyncUpdates())
+	store, _ := jstore.NewStore(
+		"elastic",
+		esTestURL(),
+		SyncUpdates(),
+		elastic.SetSniff(false),
+	)
 
-	id, _ := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	id, err := store.Marshal(ford, jstore.NewID(project, "person", "ford"))
+	require.NoError(t, err)
 	store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
 
-	err := store.Delete(id)
+	err = store.Delete(id)
 
 	assert.Equal(t, jstore.OptimisticLockingError, err)
 }
 
 func Test_FindInMissingProject(t *testing.T) {
-	b, err := jstore.NewBucket("elastic", esTestURL(), randStringBytes(10), "person", SyncUpdates())
+	b, err := jstore.NewBucket(
+		"elastic",
+		esTestURL(),
+		randStringBytes(10),
+		"person",
+		SyncUpdates(),
+		elastic.SetSniff(false),
+	)
 	assert.NoError(t, err)
 
 	// find one person by id
@@ -229,6 +263,7 @@ func Test_CompareOptions(t *testing.T) {
 		"person",
 		SyncUpdates(),
 		IndexTemplate("template-person-test", personMapping),
+		elastic.SetSniff(false),
 	)
 
 	assert.NoError(t, err)
@@ -257,11 +292,11 @@ func Test_CompareOptions(t *testing.T) {
 		},
 		{
 			" > ",
-			[]jstore.Option{jstore.Gt("age", 42)},
+			[]jstore.Option{jstore.Gt("age", 2000)},
 			&zaphod,
 		},
 		{
-			" > ",
+			" > not found",
 			[]jstore.Option{jstore.Gt("age", 4200)},
 			nil,
 		},
@@ -271,7 +306,7 @@ func Test_CompareOptions(t *testing.T) {
 			&zaphod,
 		},
 		{
-			" < ",
+			" < not found",
 			[]jstore.Option{jstore.Lt("age", 42)},
 			nil,
 		},
@@ -319,7 +354,14 @@ func Test_CompareOptions(t *testing.T) {
 
 func Test_FindN(t *testing.T) {
 	project := randStringBytes(10)
-	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", SyncUpdates())
+	b, err := jstore.NewBucket(
+		"elastic",
+		esTestURL(),
+		project,
+		"person",
+		SyncUpdates(),
+		elastic.SetSniff(false),
+	)
 	assert.NoError(t, err)
 
 	for i := 0; i < 50; i++ {
@@ -351,7 +393,14 @@ func Test_FindN(t *testing.T) {
 
 func Test_FindN_SortBy(t *testing.T) {
 	project := randStringBytes(10)
-	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", SyncUpdates())
+	b, err := jstore.NewBucket(
+		"elastic",
+		esTestURL(),
+		project,
+		"person",
+		SyncUpdates(),
+		elastic.SetSniff(false),
+	)
 	assert.NoError(t, err)
 
 	for i := 0; i < 50; i++ {
@@ -394,7 +443,14 @@ func Test_FindN_SortBy(t *testing.T) {
 
 func Test_Delete(t *testing.T) {
 	project := randStringBytes(10)
-	b, err := jstore.NewBucket("elastic", esTestURL(), project, "person", SyncUpdates())
+	b, err := jstore.NewBucket(
+		"elastic",
+		esTestURL(),
+		project,
+		"person",
+		SyncUpdates(),
+		elastic.SetSniff(false),
+	)
 	assert.NoError(t, err)
 
 	_, err = b.Marshal(ford, jstore.NewID(project, "person", "ford"))
@@ -423,6 +479,7 @@ func Test_SearchIn(t *testing.T) {
 		esTestURL(),
 		SyncUpdates(),
 		IndexTemplate("template-person-test", personMapping),
+		elastic.SetSniff(false),
 	)
 	require.NoError(t, err)
 	store := jstore.WrapStore(esStore)
@@ -441,7 +498,7 @@ func Test_SearchIn(t *testing.T) {
 
 	resp, err := search.Do(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, int64(1), resp.Hits.TotalHits)
+	assert.Equal(t, int64(1), resp.Hits.TotalHits.Value)
 }
 
 func Test_SearchInCurrentIndex(t *testing.T) {
@@ -454,6 +511,7 @@ func Test_SearchInCurrentIndex(t *testing.T) {
 		SyncUpdates(),
 		IndexTemplate("template-person-test", personMapping),
 		IndexName(func(project, documentType string, matchAll bool) string { return indexName }),
+		elastic.SetSniff(false),
 	)
 	require.NoError(t, err)
 	store := jstore.WrapStore(esStore)
@@ -473,7 +531,7 @@ func Test_SearchInCurrentIndex(t *testing.T) {
 
 	resp, err := search.Do(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, int64(2), resp.Hits.TotalHits)
+	assert.Equal(t, int64(2), resp.Hits.TotalHits.Value)
 }
 
 func Test_IndexTemplate(t *testing.T) {
@@ -489,22 +547,21 @@ func Test_IndexTemplate(t *testing.T) {
 			map[string]interface{}{
 				"index_patterns": []string{"prefix*"},
 				"mappings": map[string]interface{}{
-					"person": map[string]interface{}{
-						"properties": map[string]interface{}{
-							"name": map[string]string{
-								"type": "keyword",
-							},
-							"age": map[string]string{
-								"type": "long",
-							},
-							"birthDay": map[string]string{
-								"type": "date",
-							},
+					"properties": map[string]interface{}{
+						"name": map[string]string{
+							"type": "keyword",
+						},
+						"age": map[string]string{
+							"type": "long",
+						},
+						"birthDay": map[string]string{
+							"type": "date",
 						},
 					},
 				},
 			},
 		),
+		elastic.SetSniff(false),
 	)
 	require.NoError(t, err)
 

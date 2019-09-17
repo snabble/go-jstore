@@ -13,7 +13,7 @@ function wait_for_es {
     done
 }
 
-docker create --rm --name=es -p 9200:9200 -e "xpack.security.audit.enabled=true" -e "xpack.security.audit.outputs=logfile" docker.elastic.co/elasticsearch/elasticsearch:6.6.2
+docker create --rm --name=es -p 9200:9200 -e "xpack.security.audit.enabled=false"  -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:7.3.2
 docker start es
 
 wait_for_es

@@ -29,7 +29,7 @@ func Test_BasicStoring(t *testing.T) {
 
 	id, err := store.Marshal(ford, jstore.NewID("project", "person", "ford"))
 	require.NoError(t, err)
-	assert.Equal(t, jstore.EntityID{Project: "project", DocumentType: "person", ID: "ford", Version: 1}, id)
+	assert.Equal(t, jstore.EntityID{Project: "project", DocumentType: "person", ID: "ford", Version: Version(1)}, id)
 
 	_, err = store.Marshal(zaphod, jstore.NewID("project", "person", "zaphod"))
 	require.NoError(t, err)
@@ -55,15 +55,15 @@ func Test_OptimisticLocking_Update(t *testing.T) {
 
 	id, _ := store.Marshal(ford, jstore.NewID("project", "person", "ford"))
 
-	assert.Equal(t, int64(1), id.Version)
+	assert.Equal(t, Version(1), id.Version)
 
 	updatedID, _ := store.Marshal(Person{"Ford Prefect", 43, day("1980-01-01")}, id)
 
-	assert.Equal(t, int64(2), updatedID.Version)
+	assert.Equal(t, Version(2), updatedID.Version)
 
 	conflictedID, err := store.Marshal(Person{"Ford Prefect", 41, day("1980-01-01")}, id)
 
-	assert.Equal(t, int64(2), conflictedID.Version)
+	assert.Equal(t, Version(2), conflictedID.Version)
 	assert.Equal(t, jstore.OptimisticLockingError, err)
 }
 

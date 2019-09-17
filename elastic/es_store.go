@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	"github.com/snabble/go-jstore"
 )
@@ -133,13 +133,16 @@ func (store *ElasticStore) HealthCheck() error {
 func (store *ElasticStore) Delete(id jstore.EntityID) error {
 	query := store.client.Delete().
 		Index(store.indexName(id.Project, id.DocumentType, false)).
-		Type(id.DocumentType).
 		Id(id.ID)
 
 	if id.Version != jstore.NoVersion {
-		query.Version(id.Version)
+		version, err := checkVersion(id.Version)
+		if err != nil {
+			return err
+		}
+		query.IfSeqNo(version.SeqNo)
+		query.IfPrimaryTerm(version.PrimaryTerm)
 	}
-
 	if store.syncUpdates {
 		query = query.Refresh("true")
 	}
@@ -159,12 +162,16 @@ func (store *ElasticStore) Delete(id jstore.EntityID) error {
 func (store *ElasticStore) Save(id jstore.EntityID, json string) (jstore.EntityID, error) {
 	query := store.client.Index().
 		Index(store.indexName(id.Project, id.DocumentType, false)).
-		Type(id.DocumentType).
 		Id(id.ID).
 		BodyString(json)
 
 	if id.Version != jstore.NoVersion {
-		query.Version(id.Version)
+		version, err := checkVersion(id.Version)
+		if err != nil {
+			return jstore.EntityID{}, err
+		}
+		query.IfSeqNo(version.SeqNo)
+		query.IfPrimaryTerm(version.PrimaryTerm)
 	}
 
 	if store.syncUpdates {
@@ -184,7 +191,7 @@ func (store *ElasticStore) Save(id jstore.EntityID, json string) (jstore.EntityI
 		Project:      id.Project,
 		DocumentType: id.DocumentType,
 		ID:           resp.Id,
-		Version:      resp.Version,
+		Version:      Version{SeqNo: resp.SeqNo, PrimaryTerm: resp.PrimaryTerm},
 	}, nil
 }
 
@@ -240,14 +247,12 @@ func (store *ElasticStore) FindN(project, documentType string, maxCount int, opt
 
 func (store *ElasticStore) SearchIn(project, documentType string) *elastic.SearchService {
 	return store.client.
-		Search(store.indexName(project, documentType, true)).
-		Type(documentType)
+		Search(store.indexName(project, documentType, true))
 }
 
 func (store *ElasticStore) SearchInCurrentIndex(project, documentType string) *elastic.SearchService {
 	return store.client.
-		Search(store.indexName(project, documentType, false)).
-		Type(documentType)
+		Search(store.indexName(project, documentType, false))
 }
 
 func (store *ElasticStore) cntx() context.Context {
@@ -258,21 +263,41 @@ func toEntity(project, documentType string, hit *elastic.SearchHit) jstore.Entit
 	return jstore.Entity{
 		EntityID:  toEntityID(project, documentType, hit),
 		ObjectRef: nil,
-		JSON:      string(*hit.Source),
+		JSON:      string(hit.Source),
 	}
 }
 
+type Version struct {
+	SeqNo       int64
+	PrimaryTerm int64
+}
+
+func checkVersion(version jstore.Version) (Version, error) {
+	v, ok := version.(Version)
+	if ok {
+		return v, nil
+	}
+	return Version{}, errors.Errorf("cannot cast interface version: '%v'", version)
+}
+
 func toEntityID(project, documentType string, hit *elastic.SearchHit) jstore.EntityID {
+	version := Version{}
+	if hit.SeqNo != nil {
+		version.SeqNo = *hit.SeqNo
+	}
+	if hit.PrimaryTerm != nil {
+		version.PrimaryTerm = *hit.PrimaryTerm
+	}
 	return jstore.EntityID{
 		Project:      project,
 		DocumentType: documentType,
 		ID:           hit.Id,
-		Version:      *hit.Version,
+		Version:      version,
 	}
 }
 
 func (store *ElasticStore) createSearch(project, documentType string, options ...jstore.Option) (*elastic.SearchService, error) {
-	search := store.SearchIn(project, documentType).Version(true)
+	search := store.SearchIn(project, documentType).SeqNoPrimaryTerm(true)
 	boolQuery := elastic.NewBoolQuery()
 	for _, o := range options {
 		switch o := o.(type) {

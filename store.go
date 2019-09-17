@@ -5,13 +5,15 @@ import (
 	"errors"
 )
 
-const NoVersion = 0
+type Version interface{}
+
+var NoVersion Version = nil
 
 type EntityID struct {
 	Project      string
 	DocumentType string
 	ID           string
-	Version      int64
+	Version      Version
 }
 
 func NewID(project string, documentType string, id string) EntityID {
@@ -22,7 +24,7 @@ func NewID(project string, documentType string, id string) EntityID {
 	}
 }
 
-func NewIDWithVersion(project string, documentType string, id string, version int64) EntityID {
+func NewIDWithVersion(project string, documentType string, id string, version Version) EntityID {
 	return EntityID{
 		Project:      project,
 		DocumentType: documentType,
