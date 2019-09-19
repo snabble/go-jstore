@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	jstore "github.com/snabble/go-jstore"
+	jstore "github.com/snabble/go-jstore/v2"
 	logging "github.com/snabble/go-logging"
 )
 

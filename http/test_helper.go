@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	jstore "github.com/snabble/go-jstore"
+	jstore "github.com/snabble/go-jstore/v2"
 )
 
 type TestEntity struct {

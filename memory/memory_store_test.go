@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/snabble/go-jstore"
+	"github.com/snabble/go-jstore/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
