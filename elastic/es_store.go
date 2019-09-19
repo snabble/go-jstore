@@ -8,7 +8,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
-	"github.com/snabble/go-jstore"
+	"github.com/snabble/go-jstore/v2"
 )
 
 var DriverName = "elastic"

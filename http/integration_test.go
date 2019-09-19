@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	jstore "github.com/snabble/go-jstore"
-	"github.com/snabble/go-jstore/memory"
+	jstore "github.com/snabble/go-jstore/v2"
+	"github.com/snabble/go-jstore/v2/memory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -1,4 +1,4 @@
-module github.com/snabble/go-jstore
+module github.com/snabble/go-jstore/v2
 
 go 1.12
 

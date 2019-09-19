@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	jstore "github.com/snabble/go-jstore"
+	jstore "github.com/snabble/go-jstore/v2"
 )
 
 const ListMaxResults = 1000

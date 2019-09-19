@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	jstore "github.com/snabble/go-jstore"
+	jstore "github.com/snabble/go-jstore/v2"
 )
 
 func create(store Store,
