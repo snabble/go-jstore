@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/snabble/go-logging"
+	"github.com/snabble/go-logging/v2"
 )
 
 type HealthCheckFunc func() error

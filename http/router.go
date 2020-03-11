@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	jstore "github.com/snabble/go-jstore/v2"
-	logging "github.com/snabble/go-logging"
+	logging "github.com/snabble/go-logging/v2"
 )
 
 type Permit func(request Request) bool
@@ -140,10 +140,10 @@ func sendError(w http.ResponseWriter, err error, status int) bool {
 	if status >= 500 {
 		// Do not let internal messages to the user
 		fmt.Fprintln(w, "Internal Server Error")
-		logging.Logger.WithError(err).Errorf("Internal Server Error, Statuscode: %v", status)
+		logging.Log.WithError(err).Errorf("Internal Server Error, Statuscode: %v", status)
 	} else {
 		fmt.Fprintln(w, err)
-		logging.Logger.WithError(err).Warnf("Client Error, Statuscode: %v", status)
+		logging.Log.WithError(err).Warnf("Client Error, Statuscode: %v", status)
 	}
 	return true
 }
