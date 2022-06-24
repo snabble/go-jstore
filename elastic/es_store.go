@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/pkg/errors"
 	"github.com/snabble/go-jstore/v2"
 )
 
@@ -65,7 +64,7 @@ func IndexTemplate(name string, template interface{}) ElasticStoreOption {
 		}
 
 		if !response.Acknowledged {
-			return errors.Errorf("creation of index template %s not acknowledged", name)
+			return fmt.Errorf("creation of index template %s not acknowledged", name)
 		}
 		return nil
 	}
@@ -122,10 +121,10 @@ func (store *ElasticStore) HealthCheck() error {
 	resp, err := store.client.ClusterHealth().
 		Do(cntx)
 	if err != nil {
-		return errors.Wrap(err, "elasticsearch health")
+		return fmt.Errorf("elasticsearch health: %w", err)
 	}
 	if resp.Status != "green" && resp.Status != "yellow" {
-		return errors.Errorf("elasticsearch health status is %v", resp.Status)
+		return fmt.Errorf("elasticsearch health status is %v", resp.Status)
 	}
 	return nil
 }
@@ -153,7 +152,7 @@ func (store *ElasticStore) Delete(id jstore.EntityID) error {
 		if e, ok := err.(*elastic.Error); ok && e.Details != nil && e.Details.Type == "version_conflict_engine_exception" {
 			return jstore.OptimisticLockingError
 		}
-		return errors.Wrapf(err, "deleting entity %v", id)
+		return fmt.Errorf("deleting entity %v: %w", id, err)
 	}
 
 	return err
@@ -277,7 +276,7 @@ func checkVersion(version jstore.Version) (Version, error) {
 	if ok {
 		return v, nil
 	}
-	return Version{}, errors.Errorf("cannot cast interface version: '%v'", version)
+	return Version{}, fmt.Errorf("cannot cast interface version: '%v'", version)
 }
 
 func toEntityID(project, documentType string, hit *elastic.SearchHit) jstore.EntityID {
@@ -316,12 +315,12 @@ func (store *ElasticStore) createSearch(project, documentType string, options ..
 			case ">=":
 				boolQuery.Must(elastic.NewRangeQuery(o.Property).Gte(o.Value))
 			default:
-				return nil, errors.New("unsupported compare option: " + o.Operation)
+				return nil, fmt.Errorf("unsupported compare option: %s", o.Operation)
 			}
 		case jstore.SortOption:
 			search = search.Sort(o.Property, o.Ascending)
 		default:
-			return nil, errors.Errorf("unsupported option: %v", o)
+			return nil, fmt.Errorf("unsupported option: %v", o)
 		}
 	}
 

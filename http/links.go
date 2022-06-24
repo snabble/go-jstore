@@ -2,9 +2,8 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
-
-	"github.com/pkg/errors"
 )
 
 type Link struct {
@@ -40,7 +39,7 @@ func (links *Links) UnmarshalJSON(input []byte) error {
 	for rel, obj := range in {
 		href, err := url.Parse(obj.Href)
 		if err != nil {
-			return errors.Wrapf(err, "'%s' is not a valid url", obj.Href)
+			return fmt.Errorf("'%s' is not a valid url: %w", obj.Href, err)
 		}
 		links.Links = append(links.Links, Link{Relation: rel, Href: href})
 	}
