@@ -8,7 +8,6 @@ import (
 
 	"encoding/json"
 
-	"github.com/pkg/errors"
 	"github.com/snabble/go-jstore/v2"
 )
 
@@ -29,7 +28,7 @@ func newItem(entity jstore.Entity) (storageItem, error) {
 	}
 	err := json.Unmarshal([]byte(entity.JSON), &item.object)
 	if err != nil {
-		return item, errors.Wrap(err, "could not unmarshall json")
+		return item, fmt.Errorf("could not unmarshall json: %w", err)
 	}
 	return item, nil
 }
@@ -47,24 +46,24 @@ func (item *storageItem) matches(options ...jstore.Option) (bool, error) {
 			case string:
 				value, ok := item.object[option.Property].(string)
 				if !ok {
-					return false, errors.New("should be string")
+					return false, fmt.Errorf("should be string")
 				}
 
 				switch option.Operation {
 				case "=":
 					result = result && (value == option.Value)
 				default:
-					return false, errors.New("unsupported compare option: " + option.Operation)
+					return false, fmt.Errorf("unsupported compare option: %s", option.Operation)
 				}
 			case time.Time:
 				value, ok := item.object[option.Property].(string)
 				if !ok {
-					return false, errors.New("should be string")
+					return false, fmt.Errorf("should be string")
 				}
 
 				t, err := time.Parse("2006-01-02T15:04:05Z", value)
 				if err != nil {
-					return false, errors.Wrap(err, "not a date")
+					return false, fmt.Errorf("not a date: %w", err)
 				}
 
 				s := option.Value.(time.Time)
@@ -81,13 +80,13 @@ func (item *storageItem) matches(options ...jstore.Option) (bool, error) {
 				case ">=":
 					result = result && (s.Before(t) || s == t)
 				default:
-					return false, errors.New("unsupported compare option: " + option.Operation)
+					return false, fmt.Errorf("unsupported compare option: %s", option.Operation)
 				}
 
 			case int:
 				t, ok := item.object[option.Property].(float64)
 				if !ok {
-					return false, errors.New("not a number")
+					return false, fmt.Errorf("not a number")
 				}
 				s := option.Value.(int)
 				r, err := handleNumber(option.Operation, t, float64(s))
@@ -99,7 +98,7 @@ func (item *storageItem) matches(options ...jstore.Option) (bool, error) {
 			case float64:
 				t, ok := item.object[option.Property].(float64)
 				if !ok {
-					return false, errors.New("not a number")
+					return false, fmt.Errorf("not a number")
 				}
 				s := option.Value.(float64)
 				r, err := handleNumber(option.Operation, t, s)
@@ -111,7 +110,7 @@ func (item *storageItem) matches(options ...jstore.Option) (bool, error) {
 			case int64:
 				t, ok := item.object[option.Property].(float64)
 				if !ok {
-					return false, errors.New("not a number")
+					return false, fmt.Errorf("not a number")
 				}
 				s := option.Value.(int64)
 				r, err := handleNumber(option.Operation, t, float64(s))
@@ -121,11 +120,11 @@ func (item *storageItem) matches(options ...jstore.Option) (bool, error) {
 				result = result && r
 
 			default:
-				return false, errors.New("unsupported type for comparison")
+				return false, fmt.Errorf("unsupported type for comparison")
 			}
 
 		default:
-			return false, errors.Errorf("unsupported option: %+v", option)
+			return false, fmt.Errorf("unsupported option: %+v", option)
 		}
 	}
 	return result, nil
@@ -144,7 +143,7 @@ func handleNumber(operation string, t, s float64) (bool, error) {
 	case ">=":
 		return (t >= s), nil
 	default:
-		return false, errors.New("unsupported compare option: " + operation)
+		return false, fmt.Errorf("unsupported compare option: %s", operation)
 	}
 }
 
