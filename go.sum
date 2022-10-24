@@ -40,10 +40,12 @@ github.com/snabble/go-logging/v2 v2.9.4 h1:g2KWfD+18BdltlOnwsrliYre/lUNQcpC7DFc6
 github.com/snabble/go-logging/v2 v2.9.4/go.mod h1:a/OM9Wa8nH9l1fSBqe/VVVL1l7++jP9VEYV+1ZcJyOE=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
+github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
+github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
+github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/uptrace/opentelemetry-go-extra/otellogrus v0.1.15 h1:KSd3yYV2fk04D1cuAGkMiCTbAs59u69Dsq1oUisUzJY=
 github.com/uptrace/opentelemetry-go-extra/otellogrus v0.1.15/go.mod h1:h9Fha0tfy6Bo4Zvalrd1c1MiE2QvD8DFxZ5rD1hDJcY=
 github.com/uptrace/opentelemetry-go-extra/otelutil v0.1.15 h1:5eYO+onNB1mbdc3+uw6r+yNFFEzqR6sm8sj7zcrjrAs=
